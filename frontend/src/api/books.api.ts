@@ -6,3 +6,4 @@ export const booksApi = {
   get: (id: string) => apiFetch<{ book: Book }>(`/api/books/${id}`),
   trackView: (bookId: string) => apiFetch('/api/books/' + bookId + '/view', { method: 'POST' })
 };
+

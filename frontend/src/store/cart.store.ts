@@ -16,3 +16,4 @@ export const cartStore = create<CartState>((set) => ({
   remove: (bookId) => set((state) => ({ bookIds: state.bookIds.filter((id) => id !== bookId) })),
   clear: () => set({ bookIds: [] })
 }));
+

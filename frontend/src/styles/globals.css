@@ -4,14 +4,60 @@
 
 :root {
   color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   @apply bg-slate-50 text-slate-900;
   margin: 0;
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: "Inter", "Segoe UI", sans-serif;
 }
 
 a {
-  @apply text-brand-700 hover:text-brand-900;
+  color: #1e3a8a;
+  transition: color 0.2s;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #3b82f6;
+}
+
+/* Scripture / blockquote styling */
+.scripture {
+  @apply pl-4 border-l-4 border-brand-300 italic text-slate-700 my-4;
+}
+
+/* Scroll-triggered animation utility */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eff6ff;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #93c5fd;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
 }

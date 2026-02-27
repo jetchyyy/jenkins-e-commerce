@@ -4,3 +4,4 @@ export const formatCurrency = (amountCents: number, currency = 'PHP') => {
     currency
   }).format(amountCents / 100);
 };
+

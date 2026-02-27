@@ -10,3 +10,4 @@ export const env = {
   SUPABASE_ANON_KEY: required(import.meta.env.VITE_SUPABASE_ANON_KEY, 'VITE_SUPABASE_ANON_KEY'),
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
 };
+

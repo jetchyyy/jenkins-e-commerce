@@ -16,3 +16,4 @@ export const authApi = {
     if (error) throw error;
   }
 };
+

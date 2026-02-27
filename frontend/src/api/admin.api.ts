@@ -14,3 +14,4 @@ export const adminApi = {
       body: JSON.stringify(payload)
     })
 };
+

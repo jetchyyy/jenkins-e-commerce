@@ -10,3 +10,4 @@ export const BookGrid = ({ books }: { books: Book[] }) => {
     </div>
   );
 };
+
