@@ -3,6 +3,7 @@ import { apiFetch } from './client';
 export const adminApi = {
   analytics: () => apiFetch<Record<string, unknown>>('/api/admin/analytics'),
   orders: () => apiFetch<{ orders: Array<Record<string, unknown>> }>('/api/admin/orders'),
+  users: () => apiFetch<{ users: Array<Record<string, unknown>> }>('/api/admin/users'),
   createBook: (payload: Record<string, unknown>) =>
     apiFetch('/api/admin/books', {
       method: 'POST',
@@ -12,6 +13,25 @@ export const adminApi = {
     apiFetch(`/api/admin/books/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload)
+    }),
+  deleteBook: (id: string) =>
+    apiFetch(`/api/admin/books/${id}`, {
+      method: 'DELETE'
+    }),
+  uploadBookFile: (
+    id: string,
+    payload: { file_base64: string; file_name: string; format: 'pdf' | 'epub' } | { file_path: string; format: 'pdf' | 'epub' }
+  ) =>
+    apiFetch(`/api/admin/books/${id}/upload`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+  uploadBookCover: (
+    id: string,
+    payload: { file_base64: string; file_name: string; content_type: 'image/webp' | 'image/jpeg' | 'image/png' }
+  ) =>
+    apiFetch(`/api/admin/books/${id}/cover`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
     })
 };
-

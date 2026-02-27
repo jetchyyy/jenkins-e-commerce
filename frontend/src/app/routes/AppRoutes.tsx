@@ -20,6 +20,7 @@ import { AdminBookForm } from '../../pages/admin/AdminBookForm';
 import { AdminOrders } from '../../pages/admin/AdminOrders';
 import { AdminLatestDrops } from '../../pages/admin/AdminLatestDrops';
 import { AdminAnalytics } from '../../pages/admin/AdminAnalytics';
+import { AdminUsers } from '../../pages/admin/AdminUsers';
 
 export const AppRoutes = () => {
   return (
@@ -32,7 +33,9 @@ export const AppRoutes = () => {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/books" element={<AdminBooks />} />
         <Route path="/admin/books/new" element={<AdminBookForm />} />
+        <Route path="/admin/books/:id/edit" element={<AdminBookForm />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/analytics" element={<AdminAnalytics />} />
         <Route path="/admin/latest-drops" element={<AdminLatestDrops />} />
       </Route>
@@ -63,4 +66,3 @@ const PublicShellOutlet = () => (
     <Outlet />
   </PageShell>
 );
-

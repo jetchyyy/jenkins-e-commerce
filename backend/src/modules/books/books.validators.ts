@@ -6,7 +6,7 @@ export const createBookSchema = z.object({
   description: z.string().min(1),
   price_cents: z.number().int().positive(),
   currency: z.string().default('PHP'),
-  cover_url: z.string().url(),
+  cover_url: z.string().url().or(z.literal('')).default(''),
   format: z.enum(['pdf', 'epub']),
   is_active: z.boolean().default(true)
 });
@@ -25,3 +25,9 @@ const base64UploadSchema = z.object({
 });
 
 export const uploadBookFileSchema = z.union([directPathSchema, base64UploadSchema]);
+
+export const uploadBookCoverSchema = z.object({
+  file_base64: z.string().min(1),
+  file_name: z.string().min(1),
+  content_type: z.enum(['image/webp', 'image/jpeg', 'image/png'])
+});

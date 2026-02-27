@@ -19,7 +19,7 @@ app.use(helmet());
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(morgan('dev'));
 app.use('/api/checkout/webhook', stripeWebhookRouter);
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.use(apiRateLimit);
 
 app.get('/health', (_req, res) => {

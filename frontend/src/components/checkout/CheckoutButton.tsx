@@ -1,18 +1,31 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/client';
 import { cartStore } from '../../store/cart.store';
+import { ActionModal } from '../feedback/ActionModal';
+import { getFriendlyErrorMessage } from '../../lib/feedback';
+import { useAuth } from '../../hooks/useAuth';
 
 export const CheckoutButton = () => {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
   const { bookIds, clear } = cartStore();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const checkout = async () => {
     if (bookIds.length === 0) return;
+    if (!user) {
+      navigate('/login', { state: { from: { pathname: '/cart' } } });
+      return;
+    }
+
     setLoading(true);
-    setMessage('');
-    setIsSuccess(false);
 
     try {
       const intent = await apiFetch<{ provider: string; client_secret: string }>('/api/checkout/create-intent', {
@@ -25,14 +38,28 @@ export const CheckoutButton = () => {
           method: 'POST',
           body: JSON.stringify({ book_ids: bookIds }),
         });
-        setMessage('Payment complete! Your library has been updated.');
-        setIsSuccess(true);
+        setModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Payment Complete',
+          message: 'Your library has been updated.'
+        });
         clear();
         return;
       }
-      setMessage('Stripe intent created — complete payment in your Stripe flow.');
+      setModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Continue Payment',
+        message: 'Stripe intent created. Please continue in the Stripe flow.'
+      });
     } catch (error) {
-      setMessage((error as Error).message);
+      setModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Checkout Failed',
+        message: getFriendlyErrorMessage(error, 'Checkout failed. Please try again.')
+      });
     } finally {
       setLoading(false);
     }
@@ -50,12 +77,13 @@ export const CheckoutButton = () => {
         </svg>
         {loading ? 'Processing…' : `Checkout (${bookIds.length})`}
       </button>
-      {message && (
-        <p className={`text-xs font-medium ${isSuccess ? 'text-green-600' : 'text-red-500'}`}>
-          {message}
-        </p>
-      )}
+      <ActionModal
+        isOpen={modal.isOpen}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onConfirm={() => setModal((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };
-

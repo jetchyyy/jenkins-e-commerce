@@ -12,4 +12,5 @@ booksRoutes.post('/:id/view', asyncHandler(booksController.trackView));
 
 booksRoutes.post('/', authMiddleware, requireRole(['superadmin']), asyncHandler(booksController.create));
 booksRoutes.put('/:id', authMiddleware, requireRole(['superadmin']), asyncHandler(booksController.update));
+booksRoutes.delete('/:id', authMiddleware, requireRole(['superadmin']), asyncHandler(booksController.remove));
 booksRoutes.post('/:id/upload', authMiddleware, requireRole(['superadmin']), asyncHandler(booksController.upload));

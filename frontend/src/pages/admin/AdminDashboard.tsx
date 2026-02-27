@@ -43,8 +43,19 @@ export const AdminDashboard = () => {
           <h2 className="text-xl font-bold font-heading text-[#1e3a8a] mb-1">Analytics</h2>
           <p className="text-sm text-slate-500 font-body">Monitor revenue and overall platform performance</p>
         </Link>
+        <Link
+          to="/admin/users"
+          className="rounded-2xl bg-white p-6 shadow-md border border-[#d1e4ff] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 no-underline group"
+        >
+          <div className="text-[#1e3a8a] mb-3 opacity-80 group-hover:opacity-100 transition-opacity">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V9H2v11h5m10 0v-2a4 4 0 00-8 0v2m8 0H9m8-10a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold font-heading text-[#1e3a8a] mb-1">User Management</h2>
+          <p className="text-sm text-slate-500 font-body">View and monitor registered website users</p>
+        </Link>
       </div>
     </section>
   );
 };
-

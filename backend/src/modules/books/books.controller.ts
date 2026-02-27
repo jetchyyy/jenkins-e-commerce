@@ -1,6 +1,16 @@
 import { Request, Response } from 'express';
-import { createBookSchema, updateBookSchema, uploadBookFileSchema } from './books.validators.js';
-import { createBook, getBookById, listActiveBooks, trackBookView, updateBook, updateBookFile, uploadBookBinary } from './books.service.js';
+import { createBookSchema, updateBookSchema, uploadBookCoverSchema, uploadBookFileSchema } from './books.validators.js';
+import {
+  createBook,
+  deleteBook,
+  getBookById,
+  listActiveBooks,
+  trackBookView,
+  updateBook,
+  updateBookFile,
+  uploadBookBinary,
+  uploadBookCoverBinary
+} from './books.service.js';
 
 export const booksController = {
   list: async (_req: Request, res: Response) => {
@@ -30,6 +40,11 @@ export const booksController = {
     res.json({ book });
   },
 
+  remove: async (req: Request, res: Response) => {
+    const book = await deleteBook(req.params.id);
+    res.json({ book });
+  },
+
   upload: async (req: Request, res: Response) => {
     const payload = uploadBookFileSchema.parse(req.body);
 
@@ -39,6 +54,12 @@ export const booksController = {
     }
 
     const book = await updateBookFile(req.params.id, payload.file_path, payload.format);
+    return res.json({ book });
+  },
+
+  uploadCover: async (req: Request, res: Response) => {
+    const payload = uploadBookCoverSchema.parse(req.body);
+    const book = await uploadBookCoverBinary(req.params.id, payload.file_name, payload.file_base64, payload.content_type);
     return res.json({ book });
   }
 };

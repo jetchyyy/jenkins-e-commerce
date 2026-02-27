@@ -80,3 +80,51 @@ export const generateLibraryDownload = async (userId: string, bookId: string) =>
     }
   };
 };
+
+export const getOwnedBookStream = async (userId: string, bookId: string) => {
+  const { data: grant, error: grantError } = await supabaseAdmin
+    .from('library')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('book_id', bookId)
+    .maybeSingle();
+
+  if (grantError) {
+    throw badRequest(grantError.message);
+  }
+
+  if (!grant) {
+    throw forbidden('You do not own this book');
+  }
+
+  const { data: book, error: bookError } = await supabaseAdmin
+    .from('books')
+    .select('id,title,file_path,format,is_active')
+    .eq('id', bookId)
+    .single();
+
+  if (bookError || !book) {
+    throw notFound('Book not found');
+  }
+
+  if (!book.file_path) {
+    throw badRequest('Book file is not available');
+  }
+
+  if (book.format !== 'pdf') {
+    throw badRequest('Only PDF streaming is supported in web reader');
+  }
+
+  const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage.from(PRIVATE_BOOKS_BUCKET).download(book.file_path);
+
+  if (downloadError || !fileBlob) {
+    throw badRequest(downloadError?.message ?? 'Unable to load book file');
+  }
+
+  const arrayBuffer = await fileBlob.arrayBuffer();
+  return {
+    title: book.title,
+    contentType: 'application/pdf',
+    bytes: Buffer.from(arrayBuffer)
+  };
+};

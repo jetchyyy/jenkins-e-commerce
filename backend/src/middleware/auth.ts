@@ -7,6 +7,7 @@ export type AuthRole = 'superadmin' | 'customer';
 export type AuthUser = {
   id: string;
   email: string;
+  full_name?: string | null;
   role: AuthRole;
 };
 
@@ -36,7 +37,7 @@ export const authMiddleware = async (req: Request, _res: Response, next: NextFun
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id, email, role')
+      .select('id, email, full_name, role')
       .eq('id', user.id)
       .single();
 
@@ -47,6 +48,7 @@ export const authMiddleware = async (req: Request, _res: Response, next: NextFun
     req.user = {
       id: profile.id,
       email: profile.email,
+      full_name: profile.full_name,
       role: profile.role
     };
 

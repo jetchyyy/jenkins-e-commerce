@@ -2,12 +2,19 @@ import { FormEvent, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../../api/auth.api';
 import { useAuth } from '../../hooks/useAuth';
+import { ActionModal } from '../../components/feedback/ActionModal';
+import { getFriendlyErrorMessage } from '../../lib/feedback';
 
 export const AdminLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: ''
+    });
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -19,13 +26,20 @@ export const AdminLogin = () => {
 
     const onSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        setError('');
+        if (loading) {
+            return;
+        }
         setLoading(true);
         try {
             await authApi.login(email, password);
-            navigate('/admin/dashboard');
+            setModal({ isOpen: true, type: 'success', title: 'Sign In Successful', message: 'Welcome to the admin dashboard.' });
         } catch (err) {
-            setError((err as Error).message);
+            setModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Sign In Failed',
+                message: getFriendlyErrorMessage(err, 'Unable to sign in right now.')
+            });
         } finally {
             setLoading(false);
         }
@@ -73,12 +87,6 @@ export const AdminLogin = () => {
                         />
                     </div>
 
-                    {error && (
-                        <div className="rounded-xl bg-red-500/20 border border-red-400/40 px-4 py-3">
-                            <p className="text-sm text-red-200">{error}</p>
-                        </div>
-                    )}
-
                     <button
                         type="submit"
                         disabled={loading}
@@ -95,7 +103,20 @@ export const AdminLogin = () => {
                     </Link>
                 </p>
             </div>
+            <ActionModal
+                isOpen={modal.isOpen}
+                type={modal.type}
+                title={modal.title}
+                message={modal.message}
+                confirmLabel={modal.type === 'success' ? 'Open Dashboard' : 'Close'}
+                onConfirm={() => {
+                    const wasSuccess = modal.type === 'success';
+                    setModal((prev) => ({ ...prev, isOpen: false }));
+                    if (wasSuccess) {
+                        navigate('/admin/dashboard');
+                    }
+                }}
+            />
         </div>
     );
 };
-

@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/client';
 import { cartStore } from '../../store/cart.store';
 import { useBooks } from '../../hooks/useBooks';
 import { formatCurrency } from '../../lib/format';
+import { ActionModal } from '../../components/feedback/ActionModal';
+import { getFriendlyErrorMessage } from '../../lib/feedback';
+import { useAuth } from '../../hooks/useAuth';
 
 /* ══════════════════════════════════════════════════════
    Cart Page — /cart
@@ -13,9 +16,15 @@ import { formatCurrency } from '../../lib/format';
 export const CartPage = () => {
     const { bookIds, remove, clear } = cartStore();
     const { data } = useBooks();
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState('');
-    const [isSuccess, setIsSuccess] = useState(false);
+    const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: ''
+    });
 
     // Filter only books currently in cart
     const cartBooks = (data?.books ?? []).filter((b) => bookIds.includes(b.id));
@@ -24,9 +33,12 @@ export const CartPage = () => {
 
     const checkout = async () => {
         if (bookIds.length === 0) return;
+        if (!user) {
+            navigate('/login', { state: { from: { pathname: '/cart' } } });
+            return;
+        }
+
         setLoading(true);
-        setMessage('');
-        setIsSuccess(false);
         try {
             const intent = await apiFetch<{ provider: string; client_secret: string }>('/api/checkout/create-intent', {
                 method: 'POST',
@@ -37,14 +49,28 @@ export const CartPage = () => {
                     method: 'POST',
                     body: JSON.stringify({ book_ids: bookIds }),
                 });
-                setMessage('Payment complete! Your library has been updated.');
-                setIsSuccess(true);
+                setModal({
+                    isOpen: true,
+                    type: 'success',
+                    title: 'Purchase Complete',
+                    message: 'Your books are now available in your library.'
+                });
                 clear();
                 return;
             }
-            setMessage('Stripe intent created — complete payment in your Stripe flow.');
+            setModal({
+                isOpen: true,
+                type: 'success',
+                title: 'Continue Payment',
+                message: 'Stripe intent created. Please continue in the Stripe flow.'
+            });
         } catch (err) {
-            setMessage((err as Error).message);
+            setModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Checkout Failed',
+                message: getFriendlyErrorMessage(err, 'Checkout failed. Please try again.')
+            });
         } finally {
             setLoading(false);
         }
@@ -85,7 +111,7 @@ export const CartPage = () => {
                 <div className="h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
 
                 {/* Empty state */}
-                {bookIds.length === 0 && !isSuccess && (
+                {bookIds.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
                         <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
                             <svg className="w-8 h-8 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -98,20 +124,6 @@ export const CartPage = () => {
                             className="rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-bold px-6 py-2.5 text-sm no-underline transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-blue-500/30"
                         >
                             Browse Books
-                        </Link>
-                    </div>
-                )}
-
-                {/* Success */}
-                {isSuccess && (
-                    <div className="bg-green-500/15 border border-green-400/25 rounded-2xl p-8 text-center space-y-3">
-                        <div className="w-12 h-12 rounded-full bg-green-500/20 border border-green-400/30 flex items-center justify-center mx-auto">
-                            <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                        <p className="text-green-300 font-bold text-lg">Purchase complete!</p>
-                        <p className="text-green-400/70 text-sm">Your books are now in your library.</p>
-                        <Link to="/library" className="inline-block mt-2 rounded-xl bg-green-500 hover:bg-green-400 text-white font-bold px-6 py-2.5 text-sm no-underline transition-all duration-200">
-                            Go to Library
                         </Link>
                     </div>
                 )}
@@ -163,11 +175,6 @@ export const CartPage = () => {
                                 <span className="text-white font-black text-xl">{formatCurrency(total, currency)}</span>
                             </div>
 
-                            {/* Error */}
-                            {message && !isSuccess && (
-                                <p className="text-red-300 text-sm font-medium">{message}</p>
-                            )}
-
                             {/* Checkout */}
                             <button
                                 onClick={checkout}
@@ -180,7 +187,14 @@ export const CartPage = () => {
                     </div>
                 )}
             </div>
+            <ActionModal
+                isOpen={modal.isOpen}
+                type={modal.type}
+                title={modal.title}
+                message={modal.message}
+                confirmLabel={modal.type === 'success' ? 'OK' : 'Close'}
+                onConfirm={() => setModal((prev) => ({ ...prev, isOpen: false }))}
+            />
         </section>
     );
 };
-

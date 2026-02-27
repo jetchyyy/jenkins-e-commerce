@@ -13,6 +13,7 @@ export const AdminAnalytics = () => {
   if (error) return <p className="py-12 text-center text-red-500">{(error as Error).message}</p>;
 
   const totals = (data?.totals as Array<{ total_revenue: number; total_orders: number }>)?.[0];
+  const users = (data?.users as { total: number; customers: number; superadmins: number } | undefined);
 
   return (
     <section className="space-y-8 max-w-5xl mx-auto py-8">
@@ -21,7 +22,7 @@ export const AdminAnalytics = () => {
         <p className="text-sm text-slate-500 mt-1">Monitor revenue and platform performance</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Revenue Card */}
         <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#eff6ff] to-white p-8 shadow-md border border-[#d1e4ff] relative">
           <div className="absolute -right-6 -top-6 text-[#93c5fd] opacity-20">
@@ -51,6 +52,22 @@ export const AdminAnalytics = () => {
             </p>
           </div>
         </div>
+
+        {/* Users Card */}
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#eff6ff] to-white p-8 shadow-md border border-[#d1e4ff] relative">
+          <div className="absolute -right-6 -top-6 text-[#93c5fd] opacity-20">
+            <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 10a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 1114 0H3z" />
+            </svg>
+          </div>
+          <div className="relative z-10">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-[#2563eb] mb-2">Total Users</h2>
+            <p className="text-4xl font-heading font-black text-[#1e3a8a]">{users?.total?.toLocaleString() ?? '0'}</p>
+            <p className="mt-2 text-xs text-slate-500">
+              Customers: {users?.customers?.toLocaleString() ?? '0'} · Admins: {users?.superadmins?.toLocaleString() ?? '0'}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-12 rounded-2xl border border-[#1e3a8a] bg-[#1e3a8a] overflow-hidden shadow-lg">
@@ -64,4 +81,3 @@ export const AdminAnalytics = () => {
     </section>
   );
 };
-

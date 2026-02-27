@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        const me = await apiFetch<{ user: { id: string; email: string; role: 'superadmin' | 'customer' } }>('/api/auth/me', {
+        const me = await apiFetch<{ user: { id: string; email: string; full_name?: string | null; role: 'superadmin' | 'customer' } }>('/api/auth/me', {
           headers: {
             Authorization: `Bearer ${accessToken}`
           }
@@ -38,4 +38,3 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return <>{children}</>;
 };
-

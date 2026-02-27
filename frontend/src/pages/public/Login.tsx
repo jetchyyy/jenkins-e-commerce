@@ -1,37 +1,60 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { authApi } from '../../api/auth.api';
+import { ActionModal } from '../../components/feedback/ActionModal';
+import { getFriendlyErrorMessage } from '../../lib/feedback';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
   const navigate = useNavigate();
+  const location = useLocation();
+  const nextPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/books';
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    if (loading || googleLoading) {
+      return;
+    }
     setLoading(true);
     try {
       await authApi.login(email, password);
-      navigate('/books');
+      setModal({ isOpen: true, type: 'success', title: 'Sign In Successful', message: 'Welcome back.' });
     } catch (err) {
-      setError((err as Error).message);
+      setModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Sign In Failed',
+        message: getFriendlyErrorMessage(err, 'Unable to sign in right now.')
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const onGoogleLogin = async () => {
-    setError('');
+    if (loading || googleLoading) {
+      return;
+    }
     setGoogleLoading(true);
     try {
       await authApi.loginWithGoogle();
       // Supabase redirects the browser — no navigate() needed
     } catch (err) {
-      setError((err as Error).message);
+      setModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Google Sign In Failed',
+        message: getFriendlyErrorMessage(err, 'Unable to continue with Google right now.')
+      });
       setGoogleLoading(false);
     }
   };
@@ -51,16 +74,6 @@ export const Login = () => {
 
         {/* Card */}
         <div className="bg-white rounded-3xl shadow-xl shadow-[#1e3a8a]/8 border border-[#d1e4ff] p-8 space-y-5">
-
-          {/* Error */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-2.5">
-              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-red-600 font-medium">{error}</p>
-            </div>
-          )}
 
           {/* Google Login */}
           <button
@@ -136,7 +149,20 @@ export const Login = () => {
           </Link>
         </div>
       </div>
+      <ActionModal
+        isOpen={modal.isOpen}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        confirmLabel={modal.type === 'success' ? 'Continue' : 'Close'}
+        onConfirm={() => {
+          const wasSuccess = modal.type === 'success';
+          setModal((prev) => ({ ...prev, isOpen: false }));
+          if (wasSuccess) {
+            navigate(nextPath);
+          }
+        }}
+      />
     </div>
   );
 };
-

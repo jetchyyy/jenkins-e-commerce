@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 type CartState = {
   bookIds: string[];
@@ -7,13 +8,19 @@ type CartState = {
   clear: () => void;
 };
 
-export const cartStore = create<CartState>((set) => ({
-  bookIds: [],
-  add: (bookId) =>
-    set((state) => ({
-      bookIds: state.bookIds.includes(bookId) ? state.bookIds : [...state.bookIds, bookId]
-    })),
-  remove: (bookId) => set((state) => ({ bookIds: state.bookIds.filter((id) => id !== bookId) })),
-  clear: () => set({ bookIds: [] })
-}));
-
+export const cartStore = create<CartState>()(
+  persist(
+    (set) => ({
+      bookIds: [],
+      add: (bookId) =>
+        set((state) => ({
+          bookIds: state.bookIds.includes(bookId) ? state.bookIds : [...state.bookIds, bookId]
+        })),
+      remove: (bookId) => set((state) => ({ bookIds: state.bookIds.filter((id) => id !== bookId) })),
+      clear: () => set({ bookIds: [] })
+    }),
+    {
+      name: 'guest-cart-storage'
+    }
+  )
+);

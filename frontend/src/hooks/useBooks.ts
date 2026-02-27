@@ -14,3 +14,18 @@ export const useCreateBook = () => {
   });
 };
 
+export const useUpdateBook = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) => adminApi.updateBook(id, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['books'] })
+  });
+};
+
+export const useDeleteBook = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteBook(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['books'] })
+  });
+};

@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
 import { useState, useEffect } from 'react';
+import { cartStore } from '../../store/cart.store';
 
 export const Navbar = () => {
   const { user } = useAuth();
@@ -10,6 +11,7 @@ export const Navbar = () => {
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const cartCount = cartStore((state) => state.bookIds.length);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -42,6 +44,7 @@ export const Navbar = () => {
     { to: '/', label: 'Home' },
     { to: '/author', label: 'Author' },
     { to: '/books', label: 'Books' },
+    { to: '/cart', label: `Cart${cartCount > 0 ? ` (${cartCount})` : ''}` },
   ];
   const customerLinks = isPublicUser
     ? [

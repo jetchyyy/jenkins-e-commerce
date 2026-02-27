@@ -36,6 +36,16 @@ const navLinks = [
         ),
     },
     {
+        to: '/admin/users',
+        label: 'Users',
+        exact: false,
+        icon: (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V9H2v11h5m10 0v-2a4 4 0 00-8 0v2m8 0H9m8-10a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+        ),
+    },
+    {
         to: '/admin/analytics',
         label: 'Analytics',
         exact: false,

@@ -4,7 +4,7 @@ type Role = 'superadmin' | 'customer';
 
 type AuthState = {
   accessToken: string | null;
-  user: { id: string; email: string; role: Role } | null;
+  user: { id: string; email: string; full_name?: string | null; role: Role } | null;
   setAuth: (payload: { accessToken: string | null; user: AuthState['user'] }) => void;
   clearAuth: () => void;
 };
@@ -15,4 +15,3 @@ export const authStore = create<AuthState>((set) => ({
   setAuth: ({ accessToken, user }) => set({ accessToken, user }),
   clearAuth: () => set({ accessToken: null, user: null })
 }));
-

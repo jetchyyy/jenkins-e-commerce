@@ -1,9 +1,43 @@
 import { Link } from 'react-router-dom';
-import { useBooks } from '../../hooks/useBooks';
+import { useState } from 'react';
+import { useBooks, useDeleteBook } from '../../hooks/useBooks';
 import { formatCurrency } from '../../lib/format';
+import { ActionModal } from '../../components/feedback/ActionModal';
+import { ConfirmModal } from '../../components/feedback/ConfirmModal';
+import { getFriendlyErrorMessage } from '../../lib/feedback';
 
 export const AdminBooks = () => {
   const { data, isLoading } = useBooks();
+  const deleteBook = useDeleteBook();
+  const [bookToDelete, setBookToDelete] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
+
+  const onDelete = async () => {
+    if (!bookToDelete || deleteBook.isPending) return;
+    try {
+      await deleteBook.mutateAsync(bookToDelete);
+      setBookToDelete(null);
+      setModal({ isOpen: true, type: 'success', title: 'Book Deleted', message: 'The book has been removed from the catalog.' });
+    } catch (error) {
+      setBookToDelete(null);
+      setModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Delete Failed',
+        message: getFriendlyErrorMessage(error, 'Unable to delete this book right now.')
+      });
+    }
+  };
+
+  const openDeleteConfirm = (id: string) => {
+    if (deleteBook.isPending) return;
+    setBookToDelete(id);
+  };
 
   return (
     <section className="space-y-6 max-w-5xl mx-auto py-8">
@@ -47,6 +81,22 @@ export const AdminBooks = () => {
               </div>
             </div>
             <div className="flex items-center gap-6 self-end sm:self-auto mt-2 sm:mt-0">
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/admin/books/${book.id}/edit`}
+                  className="rounded-lg border border-[#1e3a8a] px-3 py-1.5 text-xs font-semibold text-[#1e3a8a] no-underline hover:bg-[#eff6ff]"
+                >
+                  Edit
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => openDeleteConfirm(book.id)}
+                  disabled={deleteBook.isPending}
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+                >
+                  Delete
+                </button>
+              </div>
               <div className="text-right">
                 <span className="block text-xs text-slate-400 uppercase tracking-wider font-semibold">Price</span>
                 <span className="font-bold text-[#1e3a8a]">{formatCurrency(book.price_cents, book.currency)}</span>
@@ -58,7 +108,22 @@ export const AdminBooks = () => {
           </article>
         ))}
       </div>
+      <ActionModal
+        isOpen={modal.isOpen}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onConfirm={() => setModal((prev) => ({ ...prev, isOpen: false }))}
+      />
+      <ConfirmModal
+        isOpen={!!bookToDelete}
+        title="Delete Book"
+        message="Are you sure you want to delete this book from the catalog?"
+        confirmLabel="Delete"
+        isBusy={deleteBook.isPending}
+        onCancel={() => setBookToDelete(null)}
+        onConfirm={onDelete}
+      />
     </section>
   );
 };
-

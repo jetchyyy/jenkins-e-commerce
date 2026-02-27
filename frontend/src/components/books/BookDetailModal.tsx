@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../lib/format';
 import { useBook } from '../../hooks/useBooks';
+import { cartStore } from '../../store/cart.store';
+import { useAuth } from '../../hooks/useAuth';
 
 interface BookDetailModalProps {
     bookId: string;
@@ -12,6 +15,9 @@ interface BookDetailModalProps {
    ══════════════════════════════════════════════════════ */
 export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
     const { data, isLoading } = useBook(bookId);
+    const navigate = useNavigate();
+    const add = cartStore((state) => state.add);
+    const { user } = useAuth();
 
     // Close on Escape + lock body scroll
     useEffect(() => {
@@ -23,6 +29,18 @@ export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
             document.body.style.overflow = '';
         };
     }, [onClose]);
+
+    const onPurchaseNow = () => {
+        add(bookId);
+        onClose();
+
+        if (!user) {
+            navigate('/login', { state: { from: { pathname: '/cart' } } });
+            return;
+        }
+
+        navigate('/cart');
+    };
 
     return (
         <div
@@ -130,7 +148,7 @@ export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
                                     {/* Action buttons */}
                                     <div className="flex gap-3 pt-1">
                                         <button
-                                            onClick={onClose}
+                                            onClick={onPurchaseNow}
                                             className="flex-1 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-black py-3 text-sm transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-400/40 hover:-translate-y-0.5"
                                         >
                                             Purchase Now
@@ -152,4 +170,3 @@ export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
         </div>
     );
 };
-

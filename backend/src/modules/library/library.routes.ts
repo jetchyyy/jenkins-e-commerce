@@ -7,3 +7,4 @@ export const libraryRoutes = Router();
 
 libraryRoutes.get('/', authMiddleware, asyncHandler(libraryController.list));
 libraryRoutes.get('/:bookId/download', authMiddleware, asyncHandler(libraryController.download));
+libraryRoutes.get('/:bookId/stream', authMiddleware, asyncHandler(libraryController.stream));

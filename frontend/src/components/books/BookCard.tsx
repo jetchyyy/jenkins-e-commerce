@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Book } from '../../lib/zodSchemas';
 import { PriceTag } from './PriceTag';
 import { BookDetailModal } from './BookDetailModal';
+import { cartStore } from '../../store/cart.store';
 
 /* ── Standard card used on home page AllBooksSection (self-contained modal) ── */
 export const BookCard = ({ book, index = 0 }: { book: Book; index?: number }) => {
@@ -35,8 +36,11 @@ const BookCardInner = ({
   book: Book;
   index: number;
   onViewDetails: () => void;
-}) => (
-  <article className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(30,42,94,0.08)] hover:shadow-[0_8px_40px_rgba(29,78,216,0.18)] hover:-translate-y-1.5 transition-all duration-300 border border-[#d1e4ff]">
+}) => {
+  const add = cartStore((state) => state.add);
+
+  return (
+    <article className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(30,42,94,0.08)] hover:shadow-[0_8px_40px_rgba(29,78,216,0.18)] hover:-translate-y-1.5 transition-all duration-300 border border-[#d1e4ff]">
 
     {/* Cover image with quick-view overlay */}
     <div className="relative overflow-hidden">
@@ -76,13 +80,21 @@ const BookCardInner = ({
         <div className="flex text-amber-400 text-xs gap-0.5">★★★★★</div>
       </div>
 
-      <button
-        onClick={onViewDetails}
-        className="w-full rounded-xl bg-[#1e3a8a] hover:bg-[#163080] px-3 py-2.5 text-xs font-bold text-white transition-all duration-200 shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5"
-      >
-        View Details
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={() => add(book.id)}
+          className="flex-1 rounded-xl bg-[#1e3a8a] hover:bg-[#163080] px-3 py-2.5 text-xs font-bold text-white transition-all duration-200 shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5"
+        >
+          Add to Cart
+        </button>
+        <button
+          onClick={onViewDetails}
+          className="flex-1 rounded-xl border border-slate-200 hover:border-[#1e3a8a] px-3 py-2.5 text-xs font-bold text-slate-600 hover:text-[#1e3a8a] transition-all duration-200"
+        >
+          View Details
+        </button>
+      </div>
     </div>
   </article>
-);
-
+  );
+};
