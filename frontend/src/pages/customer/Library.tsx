@@ -12,6 +12,7 @@ export const Library = () => {
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-bold">My Library</h1>
+      <p className="text-sm text-slate-600">Purchased books remain in your library permanently and can be opened in secure reader mode.</p>
       <div className="grid gap-3">
         {rows.map((entry) => {
           const item = entry as {
@@ -27,7 +28,7 @@ export const Library = () => {
                 <p className="text-sm text-slate-600">{item.book.author}</p>
               </div>
               <Link to={`/reader/${item.book.id}`} className="rounded bg-brand-700 px-3 py-1 text-sm text-white">
-                Read / Download
+                Read Securely
               </Link>
             </div>
           );
@@ -37,4 +38,3 @@ export const Library = () => {
     </section>
   );
 };
-

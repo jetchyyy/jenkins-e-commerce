@@ -16,7 +16,12 @@ const envSchema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
   BOOTSTRAP_TOKEN: z.string().optional(),
-  PAYMENT_MODE: z.enum(['stripe', 'mock']).default('stripe')
+  PAYMENT_MODE: z.enum(['stripe', 'mock']).default('stripe'),
+  ALLOW_LIBRARY_DOWNLOADS: z
+    .enum(['true', 'false'])
+    .optional()
+    .default('false')
+    .transform((value) => value === 'true')
 }).transform((raw) => ({
   ...raw,
   SUPABASE_ANON_KEY: raw.SUPABASE_ANON_KEY ?? raw.VITE_SUPABASE_ANON_KEY

@@ -53,7 +53,7 @@ export const CartPage = () => {
                     isOpen: true,
                     type: 'success',
                     title: 'Purchase Complete',
-                    message: 'Your books are now available in your library.'
+                    message: 'Your books are now in your library permanently.'
                 });
                 clear();
                 return;
@@ -61,8 +61,8 @@ export const CartPage = () => {
             setModal({
                 isOpen: true,
                 type: 'success',
-                title: 'Continue Payment',
-                message: 'Stripe intent created. Please continue in the Stripe flow.'
+                title: 'Payment Pending',
+                message: 'Stripe flow is not configured yet. Keep PAYMENT_MODE=mock to test full purchase flow.'
             });
         } catch (err) {
             setModal({
@@ -193,8 +193,15 @@ export const CartPage = () => {
                 title={modal.title}
                 message={modal.message}
                 confirmLabel={modal.type === 'success' ? 'OK' : 'Close'}
-                onConfirm={() => setModal((prev) => ({ ...prev, isOpen: false }))}
+                onConfirm={() => {
+                    const isPurchaseComplete = modal.type === 'success' && modal.title === 'Purchase Complete';
+                    setModal((prev) => ({ ...prev, isOpen: false }));
+                    if (isPurchaseComplete) {
+                        navigate('/library');
+                    }
+                }}
             />
         </section>
     );
 };
+

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { badRequest } from '../../utils/http.js';
+import { env } from '../../config/env.js';
+import { badRequest, forbidden } from '../../utils/http.js';
 import { generateLibraryDownload, getOwnedBookStream, getUserLibrary, getUserOrders } from './library.service.js';
 
 export const libraryController = {
@@ -17,6 +18,10 @@ export const libraryController = {
       throw badRequest('Authenticated user required');
     }
 
+    if (!env.ALLOW_LIBRARY_DOWNLOADS) {
+      throw forbidden('Direct download is disabled. Use secure reader streaming.');
+    }
+
     const download = await generateLibraryDownload(req.user.id, req.params.bookId);
     res.json(download);
   },
@@ -31,9 +36,12 @@ export const libraryController = {
 
     res.setHeader('Content-Type', file.contentType);
     res.setHeader('Content-Disposition', `inline; filename="${safeTitle}.pdf"`);
-    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'no-referrer');
     res.send(file.bytes);
   },
 
