@@ -6,5 +6,8 @@ import { asyncHandler } from '../../middleware/asyncHandler.js';
 export const libraryRoutes = Router();
 
 libraryRoutes.get('/', authMiddleware, asyncHandler(libraryController.list));
+libraryRoutes.get('/:bookId/meta', authMiddleware, asyncHandler(libraryController.meta));
 libraryRoutes.get('/:bookId/download', authMiddleware, asyncHandler(libraryController.download));
 libraryRoutes.get('/:bookId/stream', authMiddleware, asyncHandler(libraryController.stream));
+libraryRoutes.get('/:bookId/progress', authMiddleware, asyncHandler(libraryController.getProgress));
+libraryRoutes.put('/:bookId/progress', authMiddleware, asyncHandler(libraryController.upsertProgress));

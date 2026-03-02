@@ -18,18 +18,55 @@ type ReaderState = {
   theme: ReaderTheme;
 };
 
+type EpubTocItem = {
+  label: string;
+  href: string;
+};
+
+type EpubNote = {
+  id: string;
+  cfi: string;
+  note: string;
+};
+
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
 const SWIPE_THRESHOLD = 70;
 const IOS_MAX_DPR = 1.5;
 const ANDROID_MAX_DPR = 1.8;
+const EPUB_MIN_FONT = 80;
+const EPUB_MAX_FONT = 180;
+
+const flattenToc = (items: any[] = [], depth = 0): EpubTocItem[] => {
+  const out: EpubTocItem[] = [];
+  for (const item of items) {
+    if (!item) continue;
+    const label = `${'  '.repeat(depth)}${item.label ?? 'Untitled'}`;
+    const href = item.href ?? '';
+    if (href) {
+      out.push({ label, href });
+    }
+    if (Array.isArray(item.subitems) && item.subitems.length > 0) {
+      out.push(...flattenToc(item.subitems, depth + 1));
+    }
+  }
+  return out;
+};
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export const Reader = () => {
   const { bookId = '' } = useParams();
+  const [bookFormat, setBookFormat] = useState<'pdf' | 'epub' | null>(null);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
+  const [isEpubReady, setIsEpubReady] = useState(false);
+  const [epubLocation, setEpubLocation] = useState('');
+  const [epubBookmarksCfi, setEpubBookmarksCfi] = useState<string[]>([]);
+  const [epubToc, setEpubToc] = useState<EpubTocItem[]>([]);
+  const [isTocOpen, setIsTocOpen] = useState(false);
+  const [epubFontSize, setEpubFontSize] = useState(100);
+  const [epubNotes, setEpubNotes] = useState<EpubNote[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -45,6 +82,7 @@ export const Reader = () => {
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const [nativePdfUrl, setNativePdfUrl] = useState('');
   const [useNativeRenderer, setUseNativeRenderer] = useState(false);
+  const [progressReady, setProgressReady] = useState(false);
   const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
     isOpen: false,
     type: 'success',
@@ -54,12 +92,18 @@ export const Reader = () => {
 
   const containerRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const epubContainerRef = useRef<HTMLDivElement | null>(null);
+  const epubBookRef = useRef<any>(null);
+  const epubRenditionRef = useRef<any>(null);
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const suppressClickTapRef = useRef(false);
   const renderTaskRef = useRef<{ cancel: () => void; promise: Promise<unknown> } | null>(null);
+  const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const user = authStore((state) => state.user);
   const storageKey = useMemo(() => `reader:${user?.id ?? 'guest'}:${bookId}`, [bookId, user?.id]);
+  const epubNotesKey = useMemo(() => `${storageKey}:epub_notes`, [storageKey]);
+  const epubFontKey = useMemo(() => `${storageKey}:epub_font_size`, [storageKey]);
   const { isIOS, isAndroid } = useMemo(() => {
     if (typeof navigator === 'undefined') {
       return { isIOS: false, isAndroid: false };
@@ -82,6 +126,32 @@ export const Reader = () => {
     }
     return Math.round((currentPage / pageCount) * 100);
   }, [currentPage, pageCount]);
+
+  const canInteractiveReader = useMemo(
+    () => !useNativeRenderer && ((bookFormat === 'pdf' && !!pdfDoc) || (bookFormat === 'epub' && isEpubReady)),
+    [bookFormat, isEpubReady, pdfDoc, useNativeRenderer]
+  );
+
+  useEffect(() => {
+    if (bookFormat !== 'epub') {
+      return;
+    }
+
+    const rendition = epubRenditionRef.current;
+    if (!rendition) {
+      return;
+    }
+
+    rendition.themes.fontSize(`${epubFontSize}%`);
+    localStorage.setItem(epubFontKey, String(epubFontSize));
+  }, [bookFormat, epubFontKey, epubFontSize]);
+
+  useEffect(() => {
+    if (bookFormat !== 'epub') {
+      return;
+    }
+    localStorage.setItem(epubNotesKey, JSON.stringify(epubNotes));
+  }, [bookFormat, epubNotes, epubNotesKey]);
 
   useEffect(() => {
     const onVisibility = () => setIsObscured(document.hidden);
@@ -155,7 +225,7 @@ export const Reader = () => {
   }, [theme]);
 
   const renderPage = useCallback(async () => {
-    if (useNativeRenderer || !pdfDoc || !canvasRef.current || !viewerWidth) {
+    if (bookFormat !== 'pdf' || useNativeRenderer || !pdfDoc || !canvasRef.current || !viewerWidth) {
       return;
     }
 
@@ -220,7 +290,7 @@ export const Reader = () => {
     } finally {
       setIsRendering(false);
     }
-  }, [currentPage, isAndroid, isIOS, nativePdfUrl, pdfDoc, useNativeRenderer, viewerWidth, zoom]);
+  }, [bookFormat, currentPage, isAndroid, isIOS, nativePdfUrl, pdfDoc, useNativeRenderer, viewerWidth, zoom]);
 
   useEffect(() => {
     void renderPage();
@@ -231,8 +301,16 @@ export const Reader = () => {
       return;
     }
 
+    setProgressReady(false);
+    setIsEpubReady(false);
     setIsLoading(true);
     try {
+      const [{ book }, { progress }] = await Promise.all([
+        libraryApi.meta(bookId),
+        libraryApi.getProgress(bookId).catch(() => ({ progress: null as null }))
+      ]);
+      setBookFormat(book.format);
+
       const blob = await libraryApi.streamPdf(bookId);
       const blobUrl = URL.createObjectURL(blob);
 
@@ -240,6 +318,92 @@ export const Reader = () => {
         URL.revokeObjectURL(nativePdfUrl);
       }
       setNativePdfUrl(blobUrl);
+
+      if (book.format === 'epub') {
+        setUseNativeRenderer(false);
+        setPdfDoc(null);
+
+        if (epubRenditionRef.current) {
+          epubRenditionRef.current.destroy?.();
+          epubRenditionRef.current = null;
+        }
+        if (epubBookRef.current) {
+          epubBookRef.current.destroy?.();
+          epubBookRef.current = null;
+        }
+
+        const epubModule = await import('epubjs');
+        const ePub = (epubModule as any).default ?? (epubModule as any);
+        const arrayBuffer = await blob.arrayBuffer();
+        const epubBook = ePub(arrayBuffer);
+        const rendition = epubBook.renderTo(epubContainerRef.current, {
+          width: '100%',
+          height: '100%',
+          flow: 'paginated',
+          spread: 'none'
+        });
+
+        const safeZoom = Math.max(MIN_ZOOM, Math.min(progress?.zoom ?? 1, MAX_ZOOM));
+        setZoom(safeZoom);
+        setTheme((progress?.theme as ReaderTheme | undefined) ?? 'paper');
+        setBookmarks((progress?.bookmarks ?? []).filter((page) => Number.isInteger(page) && page >= 1));
+        setEpubBookmarksCfi(progress?.bookmarks_cfi ?? []);
+        setEpubLocation(progress?.last_location ?? '');
+        const savedFontRaw = localStorage.getItem(epubFontKey);
+        const savedFont = savedFontRaw ? Number(savedFontRaw) : 100;
+        setEpubFontSize(Number.isFinite(savedFont) ? Math.max(EPUB_MIN_FONT, Math.min(savedFont, EPUB_MAX_FONT)) : 100);
+        const savedNotesRaw = localStorage.getItem(epubNotesKey);
+        const savedNotes = savedNotesRaw ? (JSON.parse(savedNotesRaw) as EpubNote[]) : [];
+        setEpubNotes(Array.isArray(savedNotes) ? savedNotes.filter((n) => n?.cfi && n?.note) : []);
+        setEpubToc(flattenToc(epubBook.navigation?.toc ?? []));
+        setIsTocOpen(false);
+
+        rendition.on('relocated', (location: any) => {
+          const idx = (location?.start?.index ?? 0) + 1;
+          const cfi = location?.start?.cfi ?? '';
+          setCurrentPage(Math.max(1, idx));
+          setEpubLocation(cfi);
+        });
+
+        rendition.on('rendered', () => {
+          for (const note of savedNotes) {
+            rendition.annotations?.highlight(note.cfi, {}, () => {}, note.id, 'epub-note');
+          }
+        });
+
+        const totalSpine = Math.max(1, epubBook.spine?.spineItems?.length ?? 1);
+        setPageCount(totalSpine);
+        epubBookRef.current = epubBook;
+        epubRenditionRef.current = rendition;
+
+        const initialTarget = progress?.last_location || undefined;
+        await rendition.display(initialTarget);
+
+        setIsReadingMode(true);
+        setShowHud(false);
+        setIsEpubReady(true);
+        setProgressReady(true);
+        setModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Book Opened',
+          message: 'EPUB reader is ready with resume and bookmark support.'
+        });
+        return;
+      }
+
+      if (epubRenditionRef.current) {
+        epubRenditionRef.current.destroy?.();
+        epubRenditionRef.current = null;
+      }
+      if (epubBookRef.current) {
+        epubBookRef.current.destroy?.();
+        epubBookRef.current = null;
+      }
+      setIsEpubReady(false);
+      setEpubToc([]);
+      setEpubNotes([]);
+      setIsTocOpen(false);
 
       // iOS Safari/WebView is significantly more reliable with native PDF rendering.
       if (isIOS) {
@@ -249,6 +413,7 @@ export const Reader = () => {
         setCurrentPage(1);
         setIsReadingMode(false);
         setShowHud(true);
+        setProgressReady(true);
         setModal({
           isOpen: true,
           type: 'success',
@@ -301,6 +466,9 @@ export const Reader = () => {
       setPdfDoc(loadedPdf);
       setPageCount(loadedPdf.numPages);
 
+      const remoteProgressResult = await libraryApi.getProgress(bookId).catch(() => ({ progress: null as null }));
+      const remoteProgress = remoteProgressResult.progress;
+
       const rawState = localStorage.getItem(storageKey);
       const fallbackState: ReaderState = {
         lastPage: 1,
@@ -308,13 +476,23 @@ export const Reader = () => {
         zoom: 1,
         theme: 'paper'
       };
-      const savedState = rawState ? ({ ...fallbackState, ...JSON.parse(rawState) } as ReaderState) : fallbackState;
+      const localState = rawState ? ({ ...fallbackState, ...JSON.parse(rawState) } as ReaderState) : fallbackState;
+      const remoteState = progress
+        ? ({
+            lastPage: progress.last_page,
+            bookmarks: progress.bookmarks ?? [],
+            zoom: progress.zoom,
+            theme: progress.theme
+          } as ReaderState)
+        : null;
+      const savedState = remoteState ? { ...fallbackState, ...remoteState } : localState;
 
       const safePage = Math.max(1, Math.min(savedState.lastPage, loadedPdf.numPages));
       setCurrentPage(safePage);
       setBookmarks((savedState.bookmarks ?? []).filter((page) => page >= 1 && page <= loadedPdf.numPages));
       setZoom(Math.max(MIN_ZOOM, Math.min(savedState.zoom, MAX_ZOOM)));
       setTheme(savedState.theme);
+      setProgressReady(true);
 
       setModal({
         isOpen: true,
@@ -350,13 +528,69 @@ export const Reader = () => {
   }, [bookmarks, currentPage, pdfDoc, storageKey, theme, zoom]);
 
   useEffect(() => {
+    if (!progressReady) {
+      return;
+    }
+
+    if (progressSaveTimerRef.current) {
+      clearTimeout(progressSaveTimerRef.current);
+    }
+
+    progressSaveTimerRef.current = setTimeout(() => {
+      if (bookFormat === 'epub' && epubRenditionRef.current) {
+        void libraryApi.saveProgress(bookId, {
+          last_page: currentPage || 1,
+          total_pages: pageCount || 1,
+          bookmarks,
+          last_location: epubLocation || undefined,
+          bookmarks_cfi: epubBookmarksCfi,
+          zoom,
+          theme,
+          renderer: 'native'
+        });
+        return;
+      }
+
+      if (bookFormat === 'pdf' && pdfDoc && !useNativeRenderer) {
+        void libraryApi.saveProgress(bookId, {
+          last_page: currentPage,
+          total_pages: pageCount || 1,
+          bookmarks,
+          zoom,
+          theme,
+          renderer: 'canvas'
+        });
+      }
+    }, 800);
+
     return () => {
+      if (progressSaveTimerRef.current) {
+        clearTimeout(progressSaveTimerRef.current);
+      }
+    };
+  }, [bookFormat, bookId, bookmarks, currentPage, epubBookmarksCfi, epubLocation, pageCount, pdfDoc, progressReady, theme, useNativeRenderer, zoom]);
+
+  useEffect(() => {
+    return () => {
+      if (progressSaveTimerRef.current) {
+        clearTimeout(progressSaveTimerRef.current);
+      }
+
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
       }
 
       if (pdfDoc) {
         void pdfDoc.destroy();
+      }
+
+      if (epubRenditionRef.current) {
+        epubRenditionRef.current.destroy?.();
+        epubRenditionRef.current = null;
+      }
+      if (epubBookRef.current) {
+        epubBookRef.current.destroy?.();
+        epubBookRef.current = null;
       }
     };
   }, [pdfDoc]);
@@ -370,12 +604,68 @@ export const Reader = () => {
   }, [nativePdfUrl]);
 
   const goToPage = (page: number) => {
-    if (!pdfDoc) {
+    if (bookFormat === 'epub') {
+      const rendition = epubRenditionRef.current;
+      const book = epubBookRef.current;
+      if (!rendition || !book) return;
+      const index = Math.max(0, Math.min(page - 1, (book.spine?.spineItems?.length ?? 1) - 1));
+      const target = book.spine?.spineItems?.[index];
+      if (target?.href) {
+        void rendition.display(target.href);
+      }
       return;
     }
 
-    const nextPage = Math.max(1, Math.min(page, pdfDoc.numPages));
-    setCurrentPage(nextPage);
+    if (pdfDoc) {
+      const nextPage = Math.max(1, Math.min(page, pdfDoc.numPages));
+      setCurrentPage(nextPage);
+    }
+  };
+
+  const goToEpubHref = (href: string) => {
+    if (!href || bookFormat !== 'epub' || !epubRenditionRef.current) {
+      return;
+    }
+    void epubRenditionRef.current.display(href);
+    setIsTocOpen(false);
+  };
+
+  const goPrev = () => {
+    if (bookFormat === 'epub' && epubRenditionRef.current) {
+      void epubRenditionRef.current.prev();
+      return;
+    }
+    goToPage(currentPage - 1);
+  };
+
+  const goNext = () => {
+    if (bookFormat === 'epub' && epubRenditionRef.current) {
+      void epubRenditionRef.current.next();
+      return;
+    }
+    goToPage(currentPage + 1);
+  };
+
+  const addEpubNote = () => {
+    if (bookFormat !== 'epub' || !epubLocation || !epubRenditionRef.current) {
+      return;
+    }
+    const text = window.prompt('Add note for this location:');
+    if (!text || !text.trim()) {
+      return;
+    }
+    const note: EpubNote = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      cfi: epubLocation,
+      note: text.trim()
+    };
+    setEpubNotes((prev) => [note, ...prev]);
+    epubRenditionRef.current.annotations?.highlight(note.cfi, {}, () => {}, note.id, 'epub-note');
+  };
+
+  const removeEpubNote = (note: EpubNote) => {
+    setEpubNotes((prev) => prev.filter((item) => item.id !== note.id));
+    epubRenditionRef.current?.annotations?.remove(note.cfi, 'epub-note');
   };
 
   const toggleFullscreen = async () => {
@@ -423,19 +713,19 @@ export const Reader = () => {
   };
 
   const handleReadingModeTap = (x: number, width: number) => {
-    if (!isReadingMode || !pdfDoc || useNativeRenderer || width <= 0) {
+    if (!isReadingMode || !canInteractiveReader || width <= 0) {
       return;
     }
 
     const ratio = x / width;
 
     if (ratio < 0.35) {
-      goToPage(currentPage - 1);
+      goPrev();
       return;
     }
 
     if (ratio > 0.65) {
-      goToPage(currentPage + 1);
+      goNext();
       return;
     }
 
@@ -443,6 +733,26 @@ export const Reader = () => {
   };
 
   const toggleBookmark = () => {
+    if (bookFormat === 'epub') {
+      const cfi = epubLocation;
+      if (!cfi) {
+        return;
+      }
+      setEpubBookmarksCfi((prev) => {
+        if (prev.includes(cfi)) {
+          return prev.filter((entry) => entry !== cfi);
+        }
+        return [...prev, cfi];
+      });
+      setBookmarks((prev) => {
+        if (prev.includes(currentPage)) {
+          return prev.filter((entry) => entry !== currentPage);
+        }
+        return [...prev, currentPage].sort((a, b) => a - b);
+      });
+      return;
+    }
+
     setBookmarks((prev) => {
       if (prev.includes(currentPage)) {
         return prev.filter((entry) => entry !== currentPage);
@@ -451,20 +761,20 @@ export const Reader = () => {
     });
   };
 
-  const isBookmarked = bookmarks.includes(currentPage);
+  const isBookmarked = bookFormat === 'epub' ? epubBookmarksCfi.includes(epubLocation) : bookmarks.includes(currentPage);
 
   const blockShortcut = (e: ReactKeyboardEvent<HTMLElement>) => {
     const key = e.key.toLowerCase();
 
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      goToPage(currentPage + 1);
+      goNext();
       return;
     }
 
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      goToPage(currentPage - 1);
+      goPrev();
       return;
     }
 
@@ -497,7 +807,7 @@ export const Reader = () => {
   };
 
   const onTouchEnd = (e: ReactTouchEvent<HTMLDivElement>) => {
-    if (!pdfDoc || useNativeRenderer) {
+    if (!canInteractiveReader) {
       return;
     }
 
@@ -516,11 +826,11 @@ export const Reader = () => {
       suppressClickTapRef.current = true;
 
       if (deltaX < 0) {
-        goToPage(currentPage + 1);
+        goNext();
         return;
       }
 
-      goToPage(currentPage - 1);
+      goPrev();
       return;
     }
 
@@ -595,37 +905,53 @@ export const Reader = () => {
 
           <div className="mt-2 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <button onClick={openBook} className="col-span-3 rounded bg-brand-700 px-4 py-2.5 text-sm text-white sm:col-span-1" disabled={isLoading}>
-              {isLoading ? 'Loading PDF...' : pdfDoc ? 'Reload Book' : 'Open Book'}
+              {isLoading ? 'Loading Book...' : canInteractiveReader ? 'Reload Book' : 'Open Book'}
             </button>
 
             <button
               className="rounded border px-3 py-2.5 text-sm"
-              disabled={!pdfDoc || useNativeRenderer || currentPage <= 1}
-              onClick={() => goToPage(currentPage - 1)}
+              disabled={!canInteractiveReader || currentPage <= 1}
+              onClick={goPrev}
             >
               Prev
             </button>
             <button
               className="rounded border px-3 py-2.5 text-sm"
-              disabled={!pdfDoc || useNativeRenderer || (pageCount > 0 && currentPage >= pageCount)}
-              onClick={() => goToPage(currentPage + 1)}
+              disabled={!canInteractiveReader || (pageCount > 0 && currentPage >= pageCount)}
+              onClick={goNext}
             >
               Next
             </button>
-            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc || useNativeRenderer} onClick={toggleBookmark}>
+            <button className="rounded border px-3 py-2.5 text-sm" disabled={!canInteractiveReader} onClick={toggleBookmark}>
               {isBookmarked ? 'Unbookmark' : 'Bookmark'}
             </button>
 
-            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc || useNativeRenderer} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>
+            <button className="rounded border px-3 py-2.5 text-sm" disabled={!canInteractiveReader || bookFormat === 'epub'} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>
               A-
             </button>
-            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc || useNativeRenderer} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>
+            <button className="rounded border px-3 py-2.5 text-sm" disabled={!canInteractiveReader || bookFormat === 'epub'} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>
               A+
             </button>
+            {bookFormat === 'epub' && (
+              <>
+                <button className="rounded border px-3 py-2.5 text-sm" disabled={!canInteractiveReader} onClick={() => setEpubFontSize((v) => Math.max(EPUB_MIN_FONT, v - 10))}>
+                  Font-
+                </button>
+                <button className="rounded border px-3 py-2.5 text-sm" disabled={!canInteractiveReader} onClick={() => setEpubFontSize((v) => Math.min(EPUB_MAX_FONT, v + 10))}>
+                  Font+
+                </button>
+                <button className="rounded border px-3 py-2.5 text-sm" disabled={!canInteractiveReader} onClick={() => setIsTocOpen((v) => !v)}>
+                  TOC
+                </button>
+                <button className="rounded border px-3 py-2.5 text-sm" disabled={!canInteractiveReader} onClick={addEpubNote}>
+                  Add Note
+                </button>
+              </>
+            )}
 
             <select
               className="rounded border px-3 py-2.5 text-sm"
-              disabled={useNativeRenderer}
+              disabled={!canInteractiveReader}
               value={theme}
               onChange={(e) => setTheme(e.target.value as ReaderTheme)}
             >
@@ -656,6 +982,45 @@ export const Reader = () => {
         </div>
       )}
 
+      {(!isReadingMode || showHud) && bookFormat === 'epub' && isTocOpen && (
+        <div className="space-y-2 rounded border border-slate-200 bg-white p-3">
+          <p className="text-sm font-semibold">Table of Contents</p>
+          <div className="max-h-52 overflow-auto space-y-1">
+            {epubToc.map((item, idx) => (
+              <button
+                key={`${item.href}-${idx}`}
+                className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-slate-100"
+                onClick={() => goToEpubHref(item.href)}
+              >
+                {item.label}
+              </button>
+            ))}
+            {epubToc.length === 0 && <p className="text-xs text-slate-500">No TOC available.</p>}
+          </div>
+        </div>
+      )}
+
+      {(!isReadingMode || showHud) && bookFormat === 'epub' && epubNotes.length > 0 && (
+        <div className="space-y-2 rounded border border-slate-200 bg-white p-3">
+          <p className="text-sm font-semibold">Notes</p>
+          <div className="max-h-52 space-y-2 overflow-auto">
+            {epubNotes.map((note) => (
+              <div key={note.id} className="rounded border border-slate-200 p-2 text-xs">
+                <p className="mb-2 text-slate-700">{note.note}</p>
+                <div className="flex gap-2">
+                  <button className="rounded border px-2 py-1" onClick={() => goToEpubHref(note.cfi)}>
+                    Go To
+                  </button>
+                  <button className="rounded border px-2 py-1" onClick={() => removeEpubNote(note)}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div
         ref={viewerRef}
         className={`relative min-h-[65vh] overflow-auto rounded-lg border border-slate-200 p-2 md:min-h-[70vh] md:p-4 ${themeClasses}`}
@@ -681,6 +1046,21 @@ export const Reader = () => {
           </div>
         )}
 
+        {bookFormat === 'epub' && !useNativeRenderer && (
+          <div className="relative mx-auto h-[78vh] w-full max-w-4xl overflow-hidden rounded border border-slate-300 bg-white">
+            <div ref={epubContainerRef} className="h-full w-full" />
+            <div className="pointer-events-none absolute inset-0 select-none opacity-15">
+              <div className="grid h-full w-full grid-cols-2 gap-8 p-4 text-[10px] font-semibold text-slate-700 md:gap-16 md:p-8 md:text-xs">
+                {Array.from({ length: 16 }).map((_, index) => (
+                  <span key={index} className="rotate-[-24deg] whitespace-nowrap">
+                    {watermark}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {nativePdfUrl && (
           <div className="space-y-2">
             <p className="text-xs text-slate-600">iOS compatibility mode is active. Reader controls are limited on this device.</p>
@@ -695,7 +1075,7 @@ export const Reader = () => {
           </div>
         )}
 
-        {isReadingMode && pdfDoc && !useNativeRenderer && (
+        {isReadingMode && canInteractiveReader && (
           <div className="pointer-events-none absolute inset-0 z-[5] flex text-[10px] uppercase tracking-wide text-white/70 md:text-xs">
             <div className="flex w-[35%] items-end justify-start p-2">Tap for Prev</div>
             <div className="flex w-[30%] items-end justify-center p-2">Tap for Menu</div>
