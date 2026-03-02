@@ -42,6 +42,8 @@ export const Reader = () => {
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showHud, setShowHud] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [nativePdfUrl, setNativePdfUrl] = useState('');
+  const [useNativeRenderer, setUseNativeRenderer] = useState(false);
   const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
     isOpen: false,
     type: 'success',
@@ -216,6 +218,35 @@ export const Reader = () => {
     setIsLoading(true);
     try {
       const blob = await libraryApi.streamPdf(bookId);
+
+      if (isIOS) {
+        if (nativePdfUrl) {
+          URL.revokeObjectURL(nativePdfUrl);
+        }
+
+        const blobUrl = URL.createObjectURL(blob);
+        setNativePdfUrl(blobUrl);
+        setUseNativeRenderer(true);
+        setPdfDoc(null);
+        setPageCount(0);
+        setCurrentPage(1);
+        setIsReadingMode(false);
+        setShowHud(true);
+        setModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Book Opened',
+          message: 'Using iOS-compatible reader mode for reliable rendering.'
+        });
+        return;
+      }
+
+      if (nativePdfUrl) {
+        URL.revokeObjectURL(nativePdfUrl);
+      }
+      setNativePdfUrl('');
+      setUseNativeRenderer(false);
+
       const arrayBuffer = await blob.arrayBuffer();
       const loadOptions = {
         data: arrayBuffer,
@@ -295,6 +326,14 @@ export const Reader = () => {
     };
   }, [pdfDoc]);
 
+  useEffect(() => {
+    return () => {
+      if (nativePdfUrl) {
+        URL.revokeObjectURL(nativePdfUrl);
+      }
+    };
+  }, [nativePdfUrl]);
+
   const goToPage = (page: number) => {
     if (!pdfDoc) {
       return;
@@ -343,7 +382,7 @@ export const Reader = () => {
   };
 
   const handleReadingModeTap = (x: number, width: number) => {
-    if (!isReadingMode || !pdfDoc || width <= 0) {
+    if (!isReadingMode || !pdfDoc || useNativeRenderer || width <= 0) {
       return;
     }
 
@@ -417,7 +456,7 @@ export const Reader = () => {
   };
 
   const onTouchEnd = (e: ReactTouchEvent<HTMLDivElement>) => {
-    if (!pdfDoc) {
+    if (!pdfDoc || useNativeRenderer) {
       return;
     }
 
@@ -449,6 +488,9 @@ export const Reader = () => {
   };
 
   const onViewerClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (useNativeRenderer) {
+      return;
+    }
     if (suppressClickTapRef.current) {
       suppressClickTapRef.current = false;
       return;
@@ -459,6 +501,16 @@ export const Reader = () => {
   };
 
   const toggleReadingMode = () => {
+    if (useNativeRenderer) {
+      setModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Reading Mode Unavailable',
+        message: 'Tap zones are not available in iOS native PDF mode.'
+      });
+      return;
+    }
+
     setIsReadingMode((prev) => {
       const next = !prev;
       setShowHud(true);
@@ -505,31 +557,32 @@ export const Reader = () => {
 
             <button
               className="rounded border px-3 py-2.5 text-sm"
-              disabled={!pdfDoc || currentPage <= 1}
+              disabled={!pdfDoc || useNativeRenderer || currentPage <= 1}
               onClick={() => goToPage(currentPage - 1)}
             >
               Prev
             </button>
             <button
               className="rounded border px-3 py-2.5 text-sm"
-              disabled={!pdfDoc || (pageCount > 0 && currentPage >= pageCount)}
+              disabled={!pdfDoc || useNativeRenderer || (pageCount > 0 && currentPage >= pageCount)}
               onClick={() => goToPage(currentPage + 1)}
             >
               Next
             </button>
-            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc} onClick={toggleBookmark}>
+            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc || useNativeRenderer} onClick={toggleBookmark}>
               {isBookmarked ? 'Unbookmark' : 'Bookmark'}
             </button>
 
-            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>
+            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc || useNativeRenderer} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}>
               A-
             </button>
-            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>
+            <button className="rounded border px-3 py-2.5 text-sm" disabled={!pdfDoc || useNativeRenderer} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>
               A+
             </button>
 
             <select
               className="rounded border px-3 py-2.5 text-sm"
+              disabled={useNativeRenderer}
               value={theme}
               onChange={(e) => setTheme(e.target.value as ReaderTheme)}
             >
@@ -567,7 +620,7 @@ export const Reader = () => {
         onTouchEnd={onTouchEnd}
         onClick={onViewerClick}
       >
-        {!pdfDoc && <p className="text-sm">Open your purchased book to start reading.</p>}
+        {!pdfDoc && !nativePdfUrl && <p className="text-sm">Open your purchased book to start reading.</p>}
 
         {pdfDoc && (
           <div className="relative mx-auto w-fit">
@@ -585,7 +638,14 @@ export const Reader = () => {
           </div>
         )}
 
-        {isReadingMode && pdfDoc && (
+        {nativePdfUrl && (
+          <div className="space-y-2">
+            <p className="text-xs text-slate-600">iOS compatibility mode is active. Reader controls are limited on this device.</p>
+            <iframe title="iOS PDF Reader" src={nativePdfUrl} className="h-[78vh] w-full rounded border border-slate-300 bg-white" />
+          </div>
+        )}
+
+        {isReadingMode && pdfDoc && !useNativeRenderer && (
           <div className="pointer-events-none absolute inset-0 z-[5] flex text-[10px] uppercase tracking-wide text-white/70 md:text-xs">
             <div className="flex w-[35%] items-end justify-start p-2">Tap for Prev</div>
             <div className="flex w-[30%] items-end justify-center p-2">Tap for Menu</div>
@@ -619,6 +679,11 @@ export const Reader = () => {
     </section>
   );
 };
+
+
+
+
+
 
 
 
