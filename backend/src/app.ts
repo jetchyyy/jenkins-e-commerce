@@ -1,6 +1,6 @@
 import cors from 'cors';
 import express from 'express';
-import * as helmet from 'helmet';
+import helmetImport from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -13,9 +13,14 @@ import { adminRoutes } from './modules/admin/admin.routes.js';
 import { stripeWebhookRouter } from './modules/checkout/stripe.webhook.js';
 import { ordersRoutes } from './modules/library/orders.routes.js';
 
+const helmetFactory = (
+  (helmetImport as unknown as { default?: (...args: unknown[]) => express.RequestHandler }).default ??
+  (helmetImport as unknown as (...args: unknown[]) => express.RequestHandler)
+);
+
 export const app = express();
 
-app.use(helmet.default());
+app.use(helmetFactory());
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(morgan('dev'));
 app.use('/api/checkout/webhook', stripeWebhookRouter);
