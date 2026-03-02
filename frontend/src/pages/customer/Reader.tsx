@@ -155,7 +155,7 @@ export const Reader = () => {
   }, [theme]);
 
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current || !viewerWidth) {
+    if (useNativeRenderer || !pdfDoc || !canvasRef.current || !viewerWidth) {
       return;
     }
 
@@ -240,6 +240,24 @@ export const Reader = () => {
         URL.revokeObjectURL(nativePdfUrl);
       }
       setNativePdfUrl(blobUrl);
+
+      // iOS Safari/WebView is significantly more reliable with native PDF rendering.
+      if (isIOS) {
+        setUseNativeRenderer(true);
+        setPdfDoc(null);
+        setPageCount(0);
+        setCurrentPage(1);
+        setIsReadingMode(false);
+        setShowHud(true);
+        setModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Book Opened',
+          message: 'Opened in iOS compatibility mode for stable rendering.'
+        });
+        return;
+      }
+
       setUseNativeRenderer(false);
 
       const arrayBuffer = await blob.arrayBuffer();
@@ -666,6 +684,13 @@ export const Reader = () => {
         {nativePdfUrl && (
           <div className="space-y-2">
             <p className="text-xs text-slate-600">iOS compatibility mode is active. Reader controls are limited on this device.</p>
+            <button
+              type="button"
+              className="rounded border px-3 py-2 text-xs"
+              onClick={() => window.open(nativePdfUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Open In New Tab
+            </button>
             <iframe title="iOS PDF Reader" src={nativePdfUrl} className="h-[78vh] w-full rounded border border-slate-300 bg-white" />
           </div>
         )}
