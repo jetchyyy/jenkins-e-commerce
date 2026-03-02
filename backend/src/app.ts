@@ -1,6 +1,6 @@
 import cors from 'cors';
 import express from 'express';
-import helmet from 'helmet';
+import * as helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -15,7 +15,7 @@ import { ordersRoutes } from './modules/library/orders.routes.js';
 
 export const app = express();
 
-app.use(helmet());
+app.use(helmet.default());
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(morgan('dev'));
 app.use('/api/checkout/webhook', stripeWebhookRouter);

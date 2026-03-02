@@ -17,15 +17,24 @@ export const Library = () => {
         {rows.map((entry) => {
           const item = entry as {
             id: string;
-            book: { id: string; title: string; author: string };
+            book: { id: string; title: string; author: string; cover_url?: string | null };
             granted_at: string;
           };
 
           return (
             <div key={item.id} className="flex items-center justify-between rounded border bg-white p-4">
-              <div>
-                <p className="font-medium">{item.book.title}</p>
-                <p className="text-sm text-slate-600">{item.book.author}</p>
+              <div className="flex items-center gap-3">
+                <div className="h-16 w-12 shrink-0 overflow-hidden rounded border border-slate-200 bg-slate-100">
+                  {item.book.cover_url ? (
+                    <img src={item.book.cover_url} alt={item.book.title} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-500">No Cover</div>
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium">{item.book.title}</p>
+                  <p className="text-sm text-slate-600">{item.book.author}</p>
+                </div>
               </div>
               <Link to={`/reader/${item.book.id}`} className="rounded bg-brand-700 px-3 py-1 text-sm text-white">
                 Read Securely
