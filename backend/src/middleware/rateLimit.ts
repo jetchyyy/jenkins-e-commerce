@@ -1,17 +1,15 @@
 import rateLimitImport from 'express-rate-limit';
 
-const rateLimit =
-  (rateLimitImport as unknown as { default?: typeof rateLimitImport }).default ??
-  (rateLimitImport as unknown as typeof rateLimitImport);
+const rateLimitFactory = ((rateLimitImport as any).default ?? rateLimitImport) as (...args: any[]) => any;
 
-export const apiRateLimit = rateLimit({
+export const apiRateLimit = rateLimitFactory({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
   legacyHeaders: false
 });
 
-export const loginRateLimit = rateLimit({
+export const loginRateLimit = rateLimitFactory({
   windowMs: 10 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -21,7 +19,7 @@ export const loginRateLimit = rateLimit({
   }
 });
 
-export const registerRateLimit = rateLimit({
+export const registerRateLimit = rateLimitFactory({
   windowMs: 15 * 60 * 1000,
   max: 5,
   standardHeaders: true,
