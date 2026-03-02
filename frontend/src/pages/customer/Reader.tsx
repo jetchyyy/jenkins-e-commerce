@@ -39,6 +39,7 @@ export const Reader = () => {
   const [viewerWidth, setViewerWidth] = useState(0);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showHud, setShowHud] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
     isOpen: false,
     type: 'success',
@@ -46,10 +47,12 @@ export const Reader = () => {
     message: ''
   });
 
+  const containerRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const suppressClickTapRef = useRef(false);
+  const renderTaskRef = useRef<{ cancel: () => void; promise: Promise<unknown> } | null>(null);
   const user = authStore((state) => state.user);
   const storageKey = useMemo(() => `reader:${user?.id ?? 'guest'}:${bookId}`, [bookId, user?.id]);
 
@@ -82,6 +85,22 @@ export const Reader = () => {
   }, []);
 
   useEffect(() => {
+    const onFullscreenChange = () => {
+      const fullscreenElement =
+        document.fullscreenElement ?? (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+      setIsFullscreen(Boolean(fullscreenElement));
+    };
+
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange as EventListener);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     const updateWidth = () => {
       if (!viewerRef.current) {
         return;
@@ -92,10 +111,18 @@ export const Reader = () => {
     };
 
     updateWidth();
+    const resizeObserver = new ResizeObserver(() => updateWidth());
+    if (viewerRef.current) {
+      resizeObserver.observe(viewerRef.current);
+    }
+
     window.addEventListener('resize', updateWidth);
+    window.addEventListener('orientationchange', updateWidth);
 
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', updateWidth);
+      window.removeEventListener('orientationchange', updateWidth);
     };
   }, []);
 
@@ -130,14 +157,35 @@ export const Reader = () => {
         return;
       }
 
-      const ratio = window.devicePixelRatio || 1;
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+      }
+
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.floor(viewport.width * ratio);
       canvas.height = Math.floor(viewport.height * ratio);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
 
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      await page.render({ canvasContext: context, viewport, canvas }).promise;
+
+      const renderTask = page.render({ canvasContext: context, viewport, canvas });
+      renderTaskRef.current = renderTask;
+
+      await renderTask.promise;
+      if (renderTaskRef.current === renderTask) {
+        renderTaskRef.current = null;
+      }
+    } catch (error) {
+      const isCancelled = typeof error === 'object' && error !== null && 'name' in error && (error as { name?: string }).name === 'RenderingCancelledException';
+      if (!isCancelled) {
+        setModal({
+          isOpen: true,
+          type: 'error',
+          title: 'Render Error',
+          message: 'Page rendering failed. Please try reloading the book.'
+        });
+      }
     } finally {
       setIsRendering(false);
     }
@@ -180,7 +228,7 @@ export const Reader = () => {
         isOpen: true,
         type: 'success',
         title: 'Book Opened',
-        message: 'Mobile reader mode is active with bookmarks, swipe, and tap navigation.'
+        message: 'Mobile reader mode is active with bookmarks, swipe, tap navigation, and fullscreen.'
       });
     } catch (err) {
       setModal({
@@ -211,6 +259,10 @@ export const Reader = () => {
 
   useEffect(() => {
     return () => {
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+      }
+
       if (pdfDoc) {
         void pdfDoc.destroy();
       }
@@ -224,6 +276,44 @@ export const Reader = () => {
 
     const nextPage = Math.max(1, Math.min(page, pdfDoc.numPages));
     setCurrentPage(nextPage);
+  };
+
+  const toggleFullscreen = async () => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const docWithWebkit = document as Document & {
+      webkitExitFullscreen?: () => Promise<void>;
+    };
+    const elWithWebkit = container as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void>;
+    };
+
+    try {
+      if (document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (docWithWebkit.webkitExitFullscreen) {
+          await docWithWebkit.webkitExitFullscreen();
+        }
+        return;
+      }
+
+      if (container.requestFullscreen) {
+        await container.requestFullscreen();
+      } else if (elWithWebkit.webkitRequestFullscreen) {
+        await elWithWebkit.webkitRequestFullscreen();
+      }
+    } catch {
+      setModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Fullscreen Unavailable',
+        message: 'Your browser blocked fullscreen mode on this device.'
+      });
+    }
   };
 
   const handleReadingModeTap = (x: number, width: number) => {
@@ -275,6 +365,12 @@ export const Reader = () => {
     if (e.key === 'b') {
       e.preventDefault();
       toggleBookmark();
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      void toggleFullscreen();
       return;
     }
 
@@ -346,6 +442,7 @@ export const Reader = () => {
 
   return (
     <section
+      ref={containerRef as React.RefObject<HTMLElement>}
       className="space-y-3 rounded-xl bg-white p-3 shadow-sm md:space-y-4 md:p-6"
       tabIndex={0}
       onContextMenu={(e) => e.preventDefault()}
@@ -417,6 +514,10 @@ export const Reader = () => {
 
             <button className="rounded border px-3 py-2.5 text-sm" onClick={toggleReadingMode}>
               {isReadingMode ? 'Exit Reading Mode' : 'Reading Mode'}
+            </button>
+
+            <button className="rounded border px-3 py-2.5 text-sm" onClick={() => void toggleFullscreen()}>
+              {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             </button>
           </div>
         </div>
