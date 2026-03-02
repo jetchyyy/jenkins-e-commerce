@@ -22,6 +22,8 @@ const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
 const SWIPE_THRESHOLD = 70;
+const IOS_MAX_DPR = 1.5;
+const ANDROID_MAX_DPR = 1.8;
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -55,6 +57,16 @@ export const Reader = () => {
   const renderTaskRef = useRef<{ cancel: () => void; promise: Promise<unknown> } | null>(null);
   const user = authStore((state) => state.user);
   const storageKey = useMemo(() => `reader:${user?.id ?? 'guest'}:${bookId}`, [bookId, user?.id]);
+  const { isIOS, isAndroid } = useMemo(() => {
+    if (typeof navigator === 'undefined') {
+      return { isIOS: false, isAndroid: false };
+    }
+
+    const ua = navigator.userAgent.toLowerCase();
+    const iOS = /iphone|ipad|ipod/.test(ua) || (ua.includes('macintosh') && 'ontouchend' in document);
+    const android = ua.includes('android');
+    return { isIOS: iOS, isAndroid: android };
+  }, []);
 
   const watermark = useMemo(() => {
     const stamp = new Date().toLocaleString();
@@ -161,7 +173,8 @@ export const Reader = () => {
         renderTaskRef.current.cancel();
       }
 
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const maxRatio = isIOS ? IOS_MAX_DPR : isAndroid ? ANDROID_MAX_DPR : 2;
+      const ratio = Math.min(window.devicePixelRatio || 1, maxRatio);
       canvas.width = Math.floor(viewport.width * ratio);
       canvas.height = Math.floor(viewport.height * ratio);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
@@ -189,7 +202,7 @@ export const Reader = () => {
     } finally {
       setIsRendering(false);
     }
-  }, [currentPage, pdfDoc, viewerWidth, zoom]);
+  }, [currentPage, isAndroid, isIOS, pdfDoc, viewerWidth, zoom]);
 
   useEffect(() => {
     void renderPage();
@@ -204,7 +217,20 @@ export const Reader = () => {
     try {
       const blob = await libraryApi.streamPdf(bookId);
       const arrayBuffer = await blob.arrayBuffer();
-      const loadedPdf = await getDocument({ data: arrayBuffer }).promise;
+      const loadOptions = {
+        data: arrayBuffer,
+        disableWorker: isIOS,
+        isEvalSupported: false,
+        useSystemFonts: true
+      };
+
+      let loadedPdf: PDFDocumentProxy;
+      try {
+        loadedPdf = await getDocument(loadOptions as any).promise;
+      } catch {
+        // iOS Safari/WebView can fail with worker mode on some devices
+        loadedPdf = await getDocument({ ...loadOptions, disableWorker: true } as any).promise;
+      }
 
       setPdfDoc(loadedPdf);
       setPageCount(loadedPdf.numPages);
@@ -593,3 +619,10 @@ export const Reader = () => {
     </section>
   );
 };
+
+
+
+
+
+
+
