@@ -39,3 +39,6 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use(errorHandler);
+
+export default app;
+
