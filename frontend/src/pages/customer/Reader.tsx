@@ -42,6 +42,7 @@ export const Reader = () => {
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showHud, setShowHud] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const [nativePdfUrl, setNativePdfUrl] = useState('');
   const [useNativeRenderer, setUseNativeRenderer] = useState(false);
   const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({
@@ -219,28 +220,6 @@ export const Reader = () => {
     try {
       const blob = await libraryApi.streamPdf(bookId);
 
-      if (isIOS) {
-        if (nativePdfUrl) {
-          URL.revokeObjectURL(nativePdfUrl);
-        }
-
-        const blobUrl = URL.createObjectURL(blob);
-        setNativePdfUrl(blobUrl);
-        setUseNativeRenderer(true);
-        setPdfDoc(null);
-        setPageCount(0);
-        setCurrentPage(1);
-        setIsReadingMode(false);
-        setShowHud(true);
-        setModal({
-          isOpen: true,
-          type: 'success',
-          title: 'Book Opened',
-          message: 'Using iOS-compatible reader mode for reliable rendering.'
-        });
-        return;
-      }
-
       if (nativePdfUrl) {
         URL.revokeObjectURL(nativePdfUrl);
       }
@@ -259,8 +238,31 @@ export const Reader = () => {
       try {
         loadedPdf = await getDocument(loadOptions as any).promise;
       } catch {
-        // iOS Safari/WebView can fail with worker mode on some devices
-        loadedPdf = await getDocument({ ...loadOptions, disableWorker: true } as any).promise;
+        try {
+          // iOS Safari/WebView can fail with worker mode on some devices
+          loadedPdf = await getDocument({ ...loadOptions, disableWorker: true } as any).promise;
+        } catch {
+          if (!isIOS) {
+            throw new Error('PDF load failed');
+          }
+
+          // Final fallback for iOS only: native PDF viewer
+          const blobUrl = URL.createObjectURL(blob);
+          setNativePdfUrl(blobUrl);
+          setUseNativeRenderer(true);
+          setPdfDoc(null);
+          setPageCount(0);
+          setCurrentPage(1);
+          setIsReadingMode(false);
+          setShowHud(true);
+          setModal({
+            isOpen: true,
+            type: 'success',
+            title: 'Book Opened',
+            message: 'Using iOS compatibility fallback. Tap-based reader mode is unavailable for this file.'
+          });
+          return;
+        }
       }
 
       setPdfDoc(loadedPdf);
@@ -357,6 +359,12 @@ export const Reader = () => {
     };
 
     try {
+      // iOS Safari commonly blocks true fullscreen; use immersive fallback.
+      if (isIOS) {
+        setIsPseudoFullscreen((prev) => !prev);
+        return;
+      }
+
       if (document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
         if (document.exitFullscreen) {
           await document.exitFullscreen();
@@ -521,7 +529,9 @@ export const Reader = () => {
   return (
     <section
       ref={containerRef as React.RefObject<HTMLElement>}
-      className="space-y-3 rounded-xl bg-white p-3 shadow-sm md:space-y-4 md:p-6"
+      className={`space-y-3 rounded-xl bg-white p-3 shadow-sm md:space-y-4 md:p-6 ${
+        isPseudoFullscreen ? 'fixed inset-0 z-[100] overflow-auto rounded-none p-2 md:p-4' : ''
+      }`}
       tabIndex={0}
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
@@ -596,7 +606,7 @@ export const Reader = () => {
             </button>
 
             <button className="rounded border px-3 py-2.5 text-sm" onClick={() => void toggleFullscreen()}>
-              {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              {isFullscreen || isPseudoFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             </button>
           </div>
         </div>
