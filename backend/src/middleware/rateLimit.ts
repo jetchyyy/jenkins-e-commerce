@@ -1,4 +1,8 @@
-import rateLimit from 'express-rate-limit';
+import rateLimitImport from 'express-rate-limit';
+
+const rateLimit =
+  (rateLimitImport as unknown as { default?: typeof rateLimitImport }).default ??
+  (rateLimitImport as unknown as typeof rateLimitImport);
 
 export const apiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
