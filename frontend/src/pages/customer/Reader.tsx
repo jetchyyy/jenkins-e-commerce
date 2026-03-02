@@ -126,16 +126,19 @@ export const Reader = () => {
     };
 
     updateWidth();
-    const resizeObserver = new ResizeObserver(() => updateWidth());
-    if (viewerRef.current) {
-      resizeObserver.observe(viewerRef.current);
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => updateWidth());
+      if (viewerRef.current) {
+        resizeObserver.observe(viewerRef.current);
+      }
     }
 
     window.addEventListener('resize', updateWidth);
     window.addEventListener('orientationchange', updateWidth);
 
     return () => {
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
       window.removeEventListener('resize', updateWidth);
       window.removeEventListener('orientationchange', updateWidth);
     };
@@ -195,6 +198,18 @@ export const Reader = () => {
     } catch (error) {
       const isCancelled = typeof error === 'object' && error !== null && 'name' in error && (error as { name?: string }).name === 'RenderingCancelledException';
       if (!isCancelled) {
+        if (isIOS && nativePdfUrl && !useNativeRenderer) {
+          setUseNativeRenderer(true);
+          setIsReadingMode(false);
+          setShowHud(true);
+          setModal({
+            isOpen: true,
+            type: 'error',
+            title: 'iOS Compatibility Mode',
+            message: 'Switched to iOS native PDF mode because canvas rendering failed on this device.'
+          });
+          return;
+        }
         setModal({
           isOpen: true,
           type: 'error',
@@ -205,7 +220,7 @@ export const Reader = () => {
     } finally {
       setIsRendering(false);
     }
-  }, [currentPage, isAndroid, isIOS, pdfDoc, viewerWidth, zoom]);
+  }, [currentPage, isAndroid, isIOS, nativePdfUrl, pdfDoc, useNativeRenderer, viewerWidth, zoom]);
 
   useEffect(() => {
     void renderPage();
@@ -219,11 +234,12 @@ export const Reader = () => {
     setIsLoading(true);
     try {
       const blob = await libraryApi.streamPdf(bookId);
+      const blobUrl = URL.createObjectURL(blob);
 
       if (nativePdfUrl) {
         URL.revokeObjectURL(nativePdfUrl);
       }
-      setNativePdfUrl('');
+      setNativePdfUrl(blobUrl);
       setUseNativeRenderer(false);
 
       const arrayBuffer = await blob.arrayBuffer();
@@ -247,7 +263,6 @@ export const Reader = () => {
           }
 
           // Final fallback for iOS only: native PDF viewer
-          const blobUrl = URL.createObjectURL(blob);
           setNativePdfUrl(blobUrl);
           setUseNativeRenderer(true);
           setPdfDoc(null);
