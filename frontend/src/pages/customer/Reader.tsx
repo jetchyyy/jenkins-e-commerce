@@ -393,7 +393,6 @@ export const Reader = () => {
       const arrayBuffer = await blob.arrayBuffer();
       const loadOptions = {
         data: arrayBuffer,
-        disableWorker: isIOS,
         isEvalSupported: false,
         useSystemFonts: true
       };
@@ -403,7 +402,7 @@ export const Reader = () => {
         loadedPdf = await getDocument(loadOptions as any).promise;
       } catch {
         try {
-          // iOS Safari/WebView can fail with worker mode on some devices, try without
+          // Mobile Safari/WebView/Android can sometimes fail with worker mode, try without
           loadedPdf = await getDocument({ ...loadOptions, disableWorker: true } as any).promise;
         } catch {
           throw new Error('PDF engine load failed. The file may be corrupt or encrypted.');
