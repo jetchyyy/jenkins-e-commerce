@@ -7,6 +7,7 @@ import book6 from '../../assets/images/BOOK 6 FRONT.jpg';
 import book7 from '../../assets/images/BOOK 7 FRONT.jpg';
 import book8 from '../../assets/images/BOOK 8 FRONT.jpg';
 import davidImg from '../../assets/images/davidjenkins.png';
+import { Link } from 'react-router-dom';
 
 const heroBooks = {
     left: [book1, book2, book3, book4],
@@ -95,18 +96,18 @@ export const HeroSection = () => (
             {/* ── BOTTOM: CTA Buttons + Scroll ── */}
             <div className="flex flex-col items-center gap-3 shrink-0">
                 <div className="flex items-center gap-3">
-                    <a
-                        href="#books"
+                    <button
+                        onClick={() => document.getElementById('books')?.scrollIntoView({ behavior: 'smooth' })}
                         className="rounded-full bg-blue-500 hover:bg-blue-400 text-white font-bold text-sm px-6 py-2.5 no-underline transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-400/40 hover:-translate-y-0.5"
                     >
                         Explore Books
-                    </a>
-                    <a
-                        href="#about"
+                    </button>
+                    <Link
+                        to="/author"
                         className="rounded-full border border-white/30 hover:border-white/60 text-white/75 hover:text-white font-semibold text-sm px-6 py-2.5 no-underline transition-all duration-300 backdrop-blur-sm hover:-translate-y-0.5"
                     >
                         Learn More
-                    </a>
+                    </Link>
                 </div>
                 {/* Scroll hint */}
                 <div className="flex flex-col items-center gap-1 opacity-40 animate-bounce mt-1">

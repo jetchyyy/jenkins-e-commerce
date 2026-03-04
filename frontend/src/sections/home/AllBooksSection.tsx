@@ -25,6 +25,7 @@ export const AllBooksSection = ({ books }: { books: Book[] }) => {
     return (
         <>
             <section
+                id="books"
                 ref={ref}
                 className="relative py-24 md:py-32 bg-cover bg-center bg-fixed overflow-hidden"
                 style={{ backgroundImage: "url('/images/books.jpg')" }}

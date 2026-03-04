@@ -41,11 +41,11 @@ export const Orders = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-[#d1e4ff]">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Order ID</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Date</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Items</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap text-right">Total</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Status</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Order ID</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Date</th>
+                  <th className="hidden sm:table-cell px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Items</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap text-right">Total</th>
+                  <th className="px-3 py-3 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d1e4ff]/50">
@@ -54,16 +54,16 @@ export const Orders = () => {
                   const itemsCount = record.order_items?.length || 0;
                   return (
                     <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 text-sm font-mono text-slate-500">#{record.id.split('-')[0]}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-[#1e3a8a]">{date}</td>
-                      <td className="px-6 py-4 text-sm text-slate-500">{itemsCount} {itemsCount === 1 ? 'book' : 'books'}</td>
-                      <td className="px-6 py-4 text-sm font-black text-[#1e3a8a] text-right">{formatCurrency(record.total_cents)}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ${record.status.toLowerCase() === 'completed' || record.status.toLowerCase() === 'paid'
-                            ? 'bg-green-100 text-green-800'
-                            : record.status.toLowerCase() === 'failed' || record.status.toLowerCase() === 'cancelled'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                      <td className="px-3 py-3 sm:px-6 sm:py-4 text-[11px] sm:text-sm font-mono text-slate-500">#{record.id.split('-')[0]}</td>
+                      <td className="px-3 py-3 sm:px-6 sm:py-4 text-[11px] sm:text-sm font-medium text-[#1e3a8a] whitespace-nowrap">{date}</td>
+                      <td className="hidden sm:table-cell px-6 py-4 text-sm text-slate-500">{itemsCount} {itemsCount === 1 ? 'book' : 'books'}</td>
+                      <td className="px-3 py-3 sm:px-6 sm:py-4 text-xs sm:text-sm font-black text-[#1e3a8a] text-right">{formatCurrency(record.total_cents)}</td>
+                      <td className="px-3 py-3 sm:px-6 sm:py-4 text-sm text-center">
+                        <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 sm:px-2.5 text-[8px] sm:text-[10px] font-bold tracking-wider uppercase ${record.status.toLowerCase() === 'completed' || record.status.toLowerCase() === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : record.status.toLowerCase() === 'failed' || record.status.toLowerCase() === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
                           }`}>
                           {record.status}
                         </span>
