@@ -43,7 +43,7 @@ export const HeroSection = () => (
             <div className="flex flex-col items-center gap-2 shrink-0 text-center">
                 <div className="flex items-center gap-2.5">
                     <div className="h-px w-8 bg-blue-400/60" />
-                    <span className="text-blue-300 text-[11px] font-bold uppercase tracking-[0.3em]">✝ David Jenkins</span>
+                    <span className="text-blue-300 text-[11px] font-bold uppercase tracking-[0.3em]">David Jenkins</span>
                     <div className="h-px w-8 bg-blue-400/60" />
                 </div>
                 <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-wide leading-tight drop-shadow-[0_2px_16px_rgba(0,0,0,0.8)]">

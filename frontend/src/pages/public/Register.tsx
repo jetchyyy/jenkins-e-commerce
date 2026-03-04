@@ -154,9 +154,7 @@ export const Register = () => {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#1e3a8a] shadow-lg shadow-[#1e3a8a]/30 mb-5">
-            <span className="text-white text-2xl">✝</span>
-          </div>
+
           <h1 className="font-heading text-3xl font-black text-[#1e3a8a] mb-1">Create account</h1>
           <p className="text-slate-500 text-sm">Join the David Jenkins community</p>
         </div>
@@ -223,9 +221,8 @@ export const Register = () => {
                 {passwordChecks.map((rule) => (
                   <li key={rule.label} className={`flex items-center gap-2 text-xs ${rule.valid ? 'text-green-700' : 'text-slate-600'}`}>
                     <span
-                      className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
-                        rule.valid ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'
-                      }`}
+                      className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${rule.valid ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'
+                        }`}
                     >
                       {rule.valid ? '✓' : '•'}
                     </span>

@@ -24,8 +24,7 @@ export const AboutSection = () => {
 
                 {/* ── Section Header ── */}
                 <div className="animate-on-scroll text-center mb-16">
-                    {/* Cross icon */}
-                    <div className="text-5xl text-white/40 mb-6 select-none">✝</div>
+
 
                     <h2 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
                         I am Jesus Christ<br className="hidden md:block" /> in the Flesh

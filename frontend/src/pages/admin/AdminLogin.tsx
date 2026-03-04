@@ -53,7 +53,7 @@ export const AdminLogin = () => {
             <div className="relative w-full max-w-md mx-4">
                 {/* Logo / Header */}
                 <div className="text-center mb-8">
-                    <div className="text-white text-5xl mb-3 select-none">✝</div>
+
                     <h1 className="font-heading text-3xl font-bold text-white tracking-wide">David Jenkins</h1>
                     <p className="text-[#93c5fd] text-sm mt-1 tracking-widest uppercase font-semibold">Superadmin Portal</p>
                 </div>

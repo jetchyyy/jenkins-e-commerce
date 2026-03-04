@@ -14,9 +14,7 @@ export const Footer = () => {
           {/* ── Brand ── */}
           <div className="space-y-4">
             <Link to="/" className="inline-flex items-center gap-2.5 no-underline group">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-                <span className="text-blue-300 text-base font-bold">✝</span>
-              </div>
+
               <span className="font-heading text-lg font-black text-white tracking-wider">David Jenkins</span>
             </Link>
             <p className="text-white/45 text-sm leading-relaxed max-w-xs">

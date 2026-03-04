@@ -65,9 +65,7 @@ export const Login = () => {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#1e3a8a] shadow-lg shadow-[#1e3a8a]/30 mb-5">
-            <span className="text-white text-2xl">✝</span>
-          </div>
+
           <h1 className="font-heading text-3xl font-black text-[#1e3a8a] mb-1">Welcome back</h1>
           <p className="text-slate-500 text-sm">Sign in to your David Jenkins account</p>
         </div>

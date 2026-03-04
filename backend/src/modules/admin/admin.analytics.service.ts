@@ -23,13 +23,13 @@ export const getAdminAnalytics = async () => {
   if (totalsError || bestSellingError || revenueDailyError || revenueWeeklyError || revenueMonthlyError || totalUsersError || customerUsersError) {
     throw badRequest(
       totalsError?.message ??
-        bestSellingError?.message ??
-        revenueDailyError?.message ??
-        revenueWeeklyError?.message ??
-        revenueMonthlyError?.message ??
-        totalUsersError?.message ??
-        customerUsersError?.message ??
-        'Analytics failed'
+      bestSellingError?.message ??
+      revenueDailyError?.message ??
+      revenueWeeklyError?.message ??
+      revenueMonthlyError?.message ??
+      totalUsersError?.message ??
+      customerUsersError?.message ??
+      'Analytics failed'
     );
   }
 
@@ -47,17 +47,26 @@ export const getAdminAnalytics = async () => {
   };
 };
 
-export const getAllOrders = async () => {
-  const { data, error } = await supabaseAdmin
+export const getAllOrders = async (page: number = 1, limit: number = 20, search?: string) => {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  let query = supabaseAdmin
     .from('orders')
-    .select('id,user_id,status,total_cents,payment_provider,payment_intent_id,created_at,order_items(id,book_id,price_cents)')
+    .select('id,user_id,status,total_cents,payment_provider,payment_intent_id,created_at,order_items(id,book_id,price_cents)', { count: 'exact' })
     .order('created_at', { ascending: false });
+
+  if (search) {
+    query = query.or(`id.ilike.%${search}%,user_id.ilike.%${search}%`);
+  }
+
+  const { data, error, count } = await query.range(from, to);
 
   if (error) {
     throw badRequest(error.message);
   }
 
-  return data;
+  return { orders: data, total: count ?? 0 };
 };
 
 export const getAllUsers = async () => {

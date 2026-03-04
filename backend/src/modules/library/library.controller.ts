@@ -91,7 +91,10 @@ export const libraryController = {
       throw badRequest('Authenticated user required');
     }
 
-    const orders = await getUserOrders(req.user.id);
-    res.json({ orders });
+    const page = Math.max(1, parseInt(req.query.page as string || '1', 10));
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string || '10', 10)));
+
+    const { data: orders, count: total } = await getUserOrders(req.user.id, page, limit);
+    res.json({ orders, total, page, limit });
   }
 };

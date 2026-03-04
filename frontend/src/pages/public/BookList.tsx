@@ -21,7 +21,7 @@ export const BookList = () => {
   return (
     <>
       <section
-        className="relative min-h-screen py-28 md:py-32 bg-cover bg-center bg-fixed"
+        className="relative min-h-screen py-28 md:py-32 bg-cover bg-center bg-fixed overflow-hidden"
         style={{ backgroundImage: "url('/images/books.jpg')" }}
       >
         {/* Dark overlay */}
@@ -31,16 +31,16 @@ export const BookList = () => {
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-700/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-700/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-10 space-y-12">
+        <div className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6 lg:px-10 space-y-12">
 
           {/* ── Hero Header ── */}
           <div className="text-center space-y-5 max-w-2xl mx-auto">
             <div className="flex items-center justify-center gap-3">
               <div className="h-px w-10 bg-blue-400/50" />
-              <span className="text-blue-300 text-xs font-bold uppercase tracking-[0.35em]">Our Collection</span>
+              <span className="text-blue-300 text-[10px] sm:text-xs font-bold uppercase tracking-[0.35em]">Our Collection</span>
               <div className="h-px w-10 bg-blue-400/50" />
             </div>
-            <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight">
+            <h1 className="font-heading text-3xl sm:text-5xl md:text-6xl font-black text-white leading-tight">
               Book Catalog
             </h1>
             <p className="text-white/45 text-base leading-relaxed">
@@ -57,7 +57,7 @@ export const BookList = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by title or author…"
-                className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/8 backdrop-blur-md border border-white/15 text-white placeholder-white/30 text-sm focus:outline-none focus:border-blue-400/50 focus:bg-white/12 transition-all duration-200"
+                className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/8 backdrop-blur-md border border-white/15 text-white placeholder-gray-400 text-sm focus:outline-none focus:border-blue-400/50 focus:bg-white/12 transition-all duration-200"
               />
               {search && (
                 <button
@@ -116,7 +116,7 @@ export const BookList = () => {
 
           {/* ── Grid ── */}
           {!isLoading && !error && books.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-2 grid-cols-3 sm:gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {books.map((book: Book, i: number) => (
                 <BookCardModal key={book.id} book={book} index={i} onViewDetails={setSelectedId} />
               ))}

@@ -37,21 +37,7 @@ export const SplashScreen = ({ onDone }: { onDone: () => void }) => {
                 className={`flex flex-col items-center gap-8 transition-all duration-1000 ease-out ${contentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                     }`}
             >
-                {/* Cross — thin, elegant SVG */}
                 <div className="flex flex-col items-center">
-                    <svg
-                        width="40"
-                        height="60"
-                        viewBox="0 0 40 60"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="text-[#3b2f2f]"
-                    >
-                        {/* Vertical beam */}
-                        <rect x="18" y="0" width="4" height="60" rx="2" fill="currentColor" opacity="0.85" />
-                        {/* Horizontal beam */}
-                        <rect x="0" y="16" width="40" height="4" rx="2" fill="currentColor" opacity="0.85" />
-                    </svg>
                 </div>
 
                 {/* Name */}

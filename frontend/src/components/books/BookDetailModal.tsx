@@ -48,8 +48,7 @@ export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-3xl bg-[#07122e] border border-white/10 rounded-[2rem] shadow-[0_60px_120px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col md:flex-row"
-                style={{ maxHeight: '88vh' }}
+                className="relative w-full max-w-3xl bg-[#07122e] border border-white/10 rounded-2xl md:rounded-[2rem] shadow-[0_60px_120px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden max-h-[88vh]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* ── Close ── */}
@@ -75,7 +74,7 @@ export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
                     return (
                         <>
                             {/* Left panel — cover */}
-                            <div className="relative md:w-72 flex-shrink-0 flex items-end justify-center overflow-hidden min-h-[260px] md:min-h-0">
+                            <div className="relative md:w-72 flex-shrink-0 flex items-center justify-center overflow-hidden h-56 md:h-auto md:min-h-0 py-4 md:py-0">
                                 {/* Full-cover ambient bg */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-[#0d2060] to-[#040b22]" />
                                 {/* Glow orb */}
@@ -85,12 +84,11 @@ export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
                                 <img
                                     src={book.cover_url}
                                     alt={book.title}
-                                    className="relative z-10 w-full h-full object-cover object-top"
-                                    style={{ maxHeight: '88vh' }}
+                                    className="relative z-10 w-full h-full object-contain drop-shadow-xl"
                                 />
 
                                 {/* Bottom gradient fade */}
-                                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#07122e] to-transparent z-20 md:hidden" />
+                                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#07122e] to-transparent z-20 md:hidden pointer-events-none" />
 
                                 {/* Badge */}
                                 <span className="absolute top-4 left-4 z-30 bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg">
@@ -99,7 +97,7 @@ export const BookDetailModal = ({ bookId, onClose }: BookDetailModalProps) => {
                             </div>
 
                             {/* Right panel — details */}
-                            <div className="flex-1 flex flex-col overflow-y-auto p-7 md:p-9 space-y-6" style={{ maxHeight: '88vh' }}>
+                            <div className="flex-1 flex flex-col overflow-y-auto p-5 md:p-9 space-y-5 md:space-y-6">
 
                                 {/* Meta */}
                                 <div>

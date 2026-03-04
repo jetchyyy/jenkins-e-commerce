@@ -29,7 +29,7 @@ export const Author = () => {
                 {/* Section label above card */}
                 <div className="flex items-center justify-center gap-3 mb-6">
                     <div className="h-px w-10 bg-blue-400/50" />
-                    <span className="text-blue-300 text-xs font-bold uppercase tracking-[0.3em]">✝ The Author</span>
+                    <span className="text-blue-300 text-xs font-bold uppercase tracking-[0.3em]">The Author</span>
                     <div className="h-px w-10 bg-blue-400/50" />
                 </div>
 

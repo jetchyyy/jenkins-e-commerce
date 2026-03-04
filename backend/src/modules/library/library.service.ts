@@ -36,18 +36,22 @@ export const getUserLibrary = async (userId: string) => {
   return data;
 };
 
-export const getUserOrders = async (userId: string) => {
-  const { data, error } = await supabaseAdmin
+export const getUserOrders = async (userId: string, page = 1, limit = 10) => {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, count, error } = await supabaseAdmin
     .from('orders')
-    .select('id,status,total_cents,payment_provider,payment_intent_id,created_at,order_items(id,book_id,price_cents)')
+    .select('id,status,total_cents,payment_provider,payment_intent_id,created_at,order_items(id,book_id,price_cents)', { count: 'exact' })
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) {
     throw badRequest(error.message);
   }
 
-  return data;
+  return { data: data ?? [], count: count ?? 0 };
 };
 
 export const generateLibraryDownload = async (userId: string, bookId: string) => {

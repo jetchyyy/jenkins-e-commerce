@@ -89,7 +89,7 @@ export const AdminShell = () => {
         <>
             {/* Brand */}
             <div className="p-6 border-b border-white/10">
-                <div className="text-white text-2xl mb-0.5 select-none">✝</div>
+
                 <h1 className="font-heading text-lg font-bold text-white leading-tight">David Jenkins</h1>
                 <span className="text-[10px] uppercase tracking-widest font-semibold text-[#93c5fd]">Superadmin Panel</span>
             </div>

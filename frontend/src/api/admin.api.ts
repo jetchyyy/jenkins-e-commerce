@@ -2,7 +2,10 @@ import { apiFetch } from './client';
 
 export const adminApi = {
   analytics: () => apiFetch<Record<string, unknown>>('/api/admin/analytics'),
-  orders: () => apiFetch<{ orders: Array<Record<string, unknown>> }>('/api/admin/orders'),
+  orders: (page: number = 1, limit: number = 20, search?: string) => {
+    const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+    return apiFetch<{ orders: Array<Record<string, unknown>>; total: number }>(`/api/admin/orders?page=${page}&limit=${limit}${searchParam}`);
+  },
   users: () => apiFetch<{ users: Array<Record<string, unknown>> }>('/api/admin/users'),
   createBook: (payload: Record<string, unknown>) =>
     apiFetch('/api/admin/books', {

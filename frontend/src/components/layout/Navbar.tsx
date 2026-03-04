@@ -3,11 +3,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
 import { useState, useEffect } from 'react';
 import { cartStore } from '../../store/cart.store';
+import { useSplashStore } from '../../store/splash.store';
 
 export const Navbar = () => {
   const { user } = useAuth();
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const { setShowSplash } = useSplashStore();
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -66,21 +68,21 @@ export const Navbar = () => {
         {/* ── Brand ── */}
         <Link
           to="/"
+          onClick={() => setShowSplash(true)}
           className="font-heading text-xl font-black tracking-widest flex items-center gap-2.5 group no-underline text-white transition-all duration-300 hover:opacity-90"
         >
-          <div className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-300 ${scrolled || !isHome
-            ? 'bg-blue-500/20 border border-blue-400/30 group-hover:bg-blue-500/30'
-            : 'bg-white/10 border border-white/20 group-hover:bg-white/20'
-            }`}>
-            <span className="text-sm font-bold text-blue-300">✝</span>
-          </div>
-          <span className="hidden sm:block">David Jenkins</span>
+          <span>David Jenkins</span>
         </Link>
 
         {/* ── Desktop Nav links ── */}
         <nav className="hidden md:flex items-center gap-6 lg:gap-8">
           {allLinks.map((link) => (
-            <Link key={link.to} to={link.to} className={navLinkClass(link.to)}>
+            <Link
+              key={link.to}
+              to={link.to}
+              className={navLinkClass(link.to)}
+              onClick={link.to === '/' ? () => setShowSplash(true) : undefined}
+            >
               {link.label}
               {isActive(link.to)
                 ? <span className="absolute bottom-0 left-0 h-[2px] w-full bg-blue-400 rounded-full" />
@@ -135,48 +137,51 @@ export const Navbar = () => {
       </div>
 
       {/* ── Mobile Menu Dropdown ── */}
-      {menuOpen && (
-        <div className="md:hidden bg-[#0c1d4a]/95 backdrop-blur-2xl border-t border-white/10 px-6 py-4 space-y-1">
-          {allLinks.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={`block rounded-xl px-4 py-3 text-sm font-semibold no-underline transition-all duration-200 ${isActive(link.to)
+      {
+        menuOpen && (
+          <div className="md:hidden bg-[#0c1d4a]/95 backdrop-blur-2xl border-t border-white/10 px-6 py-4 space-y-1">
+            {allLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={link.to === '/' ? () => { setShowSplash(true); setMenuOpen(false); } : undefined}
+                className={`block rounded-xl px-4 py-3 text-sm font-semibold no-underline transition-all duration-200 ${isActive(link.to)
                   ? 'bg-white/15 text-white'
                   : 'text-white/65 hover:text-white hover:bg-white/10'
-                }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-
-          <div className="pt-2 border-t border-white/10 mt-2 space-y-1">
-            {!isPublicUser ? (
-              <>
-                <Link
-                  to="/login"
-                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-white/65 hover:text-white hover:bg-white/10 transition-all duration-200 no-underline"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="block rounded-xl px-4 py-3 text-sm font-bold text-white bg-blue-500 hover:bg-blue-400 transition-all duration-200 no-underline text-center"
-                >
-                  Get Started
-                </Link>
-              </>
-            ) : (
-              <button
-                className="w-full text-left rounded-xl px-4 py-3 text-sm font-bold text-white/65 hover:text-white hover:bg-white/10 transition-all duration-200"
-                onClick={() => void authApi.logout()}
+                  }`}
               >
-                Log Out
-              </button>
-            )}
+                {link.label}
+              </Link>
+            ))}
+
+            <div className="pt-2 border-t border-white/10 mt-2 space-y-1">
+              {!isPublicUser ? (
+                <>
+                  <Link
+                    to="/login"
+                    className="block rounded-xl px-4 py-3 text-sm font-semibold text-white/65 hover:text-white hover:bg-white/10 transition-all duration-200 no-underline"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="block rounded-xl px-4 py-3 text-sm font-bold text-white bg-blue-500 hover:bg-blue-400 transition-all duration-200 no-underline text-center"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              ) : (
+                <button
+                  className="w-full text-left rounded-xl px-4 py-3 text-sm font-bold text-white/65 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  onClick={() => void authApi.logout()}
+                >
+                  Log Out
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </header>
+        )
+      }
+    </header >
   );
 };
